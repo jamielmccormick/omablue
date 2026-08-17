@@ -4,7 +4,7 @@ set -euo pipefail
 root="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 build_dir="$root/.build"
 dist_dir="$root/dist"
-app="$dist_dir/OmaBlue Feasibility.app"
+app="$build_dir/OmaBlue Feasibility.app"
 contents="$app/Contents"
 identity="${OMABLUE_CODESIGN_IDENTITY:--}"
 include_imsg="${OMABLUE_INCLUDE_IMSG:-0}"
@@ -17,7 +17,7 @@ for command_name in xcrun codesign plutil; do
   }
 done
 
-rm -rf -- "$build_dir" "$dist_dir"
+rm -rf -- "$build_dir"
 mkdir -p "$build_dir" "$contents/MacOS" "$contents/Library/LaunchAgents"
 
 xcrun --sdk macosx swiftc \
@@ -64,4 +64,8 @@ codesign "${sign_args[@]}" \
   "$app"
 
 codesign --verify --deep --strict --verbose=2 "$app"
-printf 'Built %s\n' "$app"
+
+mkdir -p "$dist_dir"
+rm -rf -- "$dist_dir/OmaBlue Feasibility.app"
+mv -- "$app" "$dist_dir/OmaBlue Feasibility.app"
+printf 'Built %s\n' "$dist_dir/OmaBlue Feasibility.app"

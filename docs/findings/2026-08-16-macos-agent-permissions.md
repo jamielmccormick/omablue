@@ -37,6 +37,9 @@ version and did not retain the returned value or send a message.
 | Repeating Foundation timer after reboot clock adjustment | Did not fire reliably in the headless agent; replaced with a deterministic sleep loop |
 | Team-signed agent after reboot | Pass; registered agent launches with stable Team ID `KBG936876L` |
 | Bundled signed `imsg v0.14.1` child | Pass; child executes with SIP enabled and reports basic features available after FDA approval |
+| Same-team build 4 to build 5 update | Pass; immediate launch, no reboot, and FDA plus Automation persisted |
+| Child FDA inheritance after same-team update | Pass; `imsgDatabaseReady: true`, version `0.14.1`, exit status 0 |
+| Development signing from SSH | Correctly denied; private-key use requires a manually initiated GUI login-session build |
 
 ## Architectural Evidence
 
@@ -57,6 +60,15 @@ The ad-hoc update correctly did not preserve FDA because changing the bundle
 changed its ad-hoc designated requirement. Permission persistence must be tested
 with two builds signed by the same Apple Development or Developer ID identity;
 development results must not be generalized to release updates.
+
+That stable-identity test passed between builds 4 and 5 signed by Team
+`KBG936876L`. The registered build advanced immediately without a reboot, and
+both the agent and bundled upstream `imsg` child retained database access.
+
+A failed signing attempt also showed that building directly into `dist/` can
+leave a partial bundle with an updated Info.plist but invalid signatures. The
+build now stages privately and publishes to `dist/` only after complete nested
+signature verification.
 
 ## Follow-up
 

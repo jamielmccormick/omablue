@@ -48,6 +48,9 @@ The initial physical Apple silicon test on macOS 26.5.2 passed:
 - Agent kill and automatic relaunch with permissions retained
 - Explicit unregister/register with permissions retained
 - Content-free status persistence at mode `0600`
+- Reboot/login recovery of the registered team-signed agent
+- Bundled `imsg v0.14.1` child execution with database readiness
+- Same-team build update without reboot or permission reapproval
 
 See `docs/findings/2026-08-16-macos-agent-permissions.md` for the environment,
 scope, and remaining limitations.
