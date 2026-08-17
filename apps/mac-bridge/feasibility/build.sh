@@ -38,11 +38,11 @@ cp \
 
 if [[ $include_imsg == "1" ]]; then
   imsg_source="$($root/fetch-imsg.sh)"
-  mkdir -p "$contents/Helpers/imsg"
-  cp "$imsg_source/imsg" "$contents/Helpers/imsg/imsg"
-  cp -R "$imsg_source/PhoneNumberKit_PhoneNumberKit.bundle" "$contents/Helpers/imsg/"
-  cp -R "$imsg_source/SQLite.swift_SQLite.bundle" "$contents/Helpers/imsg/"
-  codesign --verify --strict --verbose=2 "$contents/Helpers/imsg/imsg"
+  mkdir -p "$contents/Resources/imsg"
+  cp "$imsg_source/imsg" "$contents/Resources/imsg/imsg"
+  cp -R "$imsg_source/PhoneNumberKit_PhoneNumberKit.bundle" "$contents/Resources/imsg/"
+  cp -R "$imsg_source/SQLite.swift_SQLite.bundle" "$contents/Resources/imsg/"
+  codesign --verify --strict --verbose=2 "$contents/Resources/imsg/imsg"
 fi
 
 plutil -lint "$contents/Info.plist"
