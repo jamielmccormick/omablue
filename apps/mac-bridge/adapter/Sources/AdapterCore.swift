@@ -168,7 +168,7 @@ private func translateChat(_ chat: [String: Any]) throws -> [String: Any] {
     let title = nonemptyString(chat["display_name"])
         ?? contactName
         ?? nonemptyString(chat["name"])
-    let isGroup = chat["is_group"] as? Bool ?? participants.count > 1
+    let isGroup = (chat["is_group"] as? Bool) ?? (participants.count > 1)
     let participantModels: [[String: Any]] = participants.map { participant in
         [
             "id": participant,
