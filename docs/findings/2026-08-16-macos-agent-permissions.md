@@ -35,6 +35,8 @@ version and did not retain the returned value or send a message.
 | Replace ad-hoc signed bundle with incremented build | Agent launches; FDA consent does not persist across the changed ad-hoc code identity |
 | Resource lookup from LaunchAgent `argv[0]` | `argv[0]` is relative; bundle resources must resolve through `Bundle.main` |
 | Repeating Foundation timer after reboot clock adjustment | Did not fire reliably in the headless agent; replaced with a deterministic sleep loop |
+| Team-signed agent after reboot | Pass; registered agent launches with stable Team ID `KBG936876L` |
+| Bundled signed `imsg v0.14.1` child | Pass; child executes with SIP enabled and reports basic features available after FDA approval |
 
 ## Architectural Evidence
 

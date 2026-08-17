@@ -82,10 +82,12 @@ private func imsgProbe() -> (Bool, String?, Bool?, Int32?) {
         }
 
         let database = object["database"] as? [String: Any]
+        let databaseReady = (database?["ready"] as? Bool)
+            ?? (object["basic_features"] as? Bool)
         return (
             true,
             object["version"] as? String,
-            database?["ready"] as? Bool,
+            databaseReady,
             process.terminationStatus
         )
     } catch {
