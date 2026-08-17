@@ -2,7 +2,7 @@
 artifact_contract: ce-unified-plan/v1
 artifact_readiness: implementation-ready
 date: 2026-08-16
-status: active
+status: gate-passed
 ---
 
 # macOS TCC Feasibility Plan
@@ -104,3 +104,12 @@ information.
 - Do not continue to message synchronization after an unexplained permission
   inheritance result.
 - Preserve failed cases as tests and architecture findings.
+
+## Gate Decision
+
+Passed on the initial physical Mac target. The team-signed agent retained its
+permissions across launchd relaunch, reboot/login, and a changed same-team
+update. The pinned upstream `imsg v0.14.1` child inherited database readiness
+without receiving a separate FDA grant. OmaBlue may proceed to the read-only
+vertical slice while sleep/wake, logout/login, and release-equivalent Developer
+ID tests remain required before public alpha.

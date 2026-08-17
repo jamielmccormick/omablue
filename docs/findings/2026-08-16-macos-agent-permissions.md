@@ -40,6 +40,7 @@ version and did not retain the returned value or send a message.
 | Same-team build 4 to build 5 update | Pass; immediate launch, no reboot, and FDA plus Automation persisted |
 | Child FDA inheritance after same-team update | Pass; `imsgDatabaseReady: true`, version `0.14.1`, exit status 0 |
 | Development signing from SSH | Correctly denied; private-key use requires a manually initiated GUI login-session build |
+| Kill and relaunch team-signed build 5 | Pass; new PID retained direct FDA, Automation, and child database readiness |
 
 ## Architectural Evidence
 
@@ -47,9 +48,8 @@ On this macOS release and bundle layout, the embedded agent registered by
 `SMAppService` successfully uses Full Disk Access granted to the containing
 OmaBlue application. The main controller does not need to remain running.
 
-This does not yet prove that an `imsg rpc` child inherits the same responsible
-identity, that a Developer ID update preserves consent, or that permissions
-survive logout, reboot, and sleep/wake. Those remain release gates.
+This does not yet prove that a Developer ID update preserves consent or that
+permissions survive logout/login and sleep/wake. Those remain release gates.
 
 macOS also requires each changed background-item bundle to advance its build
 number. OmaBlue release tooling must reject a non-increasing
@@ -72,8 +72,6 @@ signature verification.
 
 ## Follow-up
 
-1. Add a pinned `imsg` child probe that requests only status and database
-   readiness.
-2. Test lock, sleep/wake, logout/login, and reboot/login.
-3. Repeat with a same-team Developer ID signed update.
-4. Inspect responsible-process diagnostics during the child probe.
+1. Test lock, sleep/wake, and logout/login.
+2. Repeat with a same-team Developer ID signed update.
+3. Inspect responsible-process diagnostics during the child probe.
