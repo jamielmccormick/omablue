@@ -19,6 +19,14 @@ required_files=(
   plugin/manifest.json
   apps/mac-bridge/feasibility/build.sh
   apps/mac-bridge/feasibility/fetch-imsg.sh
+  apps/mac-bridge/adapter/Sources/AdapterCore.swift
+  apps/mac-bridge/adapter/Sources/IMsgRPC.swift
+  apps/mac-bridge/adapter/Sources/SourceIdentity.swift
+  apps/mac-bridge/adapter/Sources/main.swift
+  apps/mac-bridge/adapter/Tests/main.swift
+  apps/mac-bridge/adapter/Fixtures/rpc-status.json
+  apps/mac-bridge/adapter/Fixtures/rpc-chats.json
+  apps/mac-bridge/adapter/Fixtures/rpc-messages-after.json
   Cargo.toml
   crates/bridge-protocol/Cargo.toml
   protocol/v1.md
@@ -38,6 +46,11 @@ jq empty \
   "$repo_root/protocol/fixtures/v1/status-response.json" \
   "$repo_root/protocol/fixtures/v1/sync-response.json" \
   "$repo_root/protocol/fixtures/v1/message-event.json"
+
+jq empty \
+  "$repo_root/apps/mac-bridge/adapter/Fixtures/rpc-status.json" \
+  "$repo_root/apps/mac-bridge/adapter/Fixtures/rpc-chats.json" \
+  "$repo_root/apps/mac-bridge/adapter/Fixtures/rpc-messages-after.json"
 
 if command -v xmllint >/dev/null 2>&1; then
   xmllint --noout \

@@ -1,0 +1,27 @@
+{
+  "chats": [
+    {
+      "id": 7,
+      "name": "Alex Example",
+      "display_name": "",
+      "contact_name": "Alex Example",
+      "identifier": "+15550000001",
+      "guid": "iMessage;-;+15550000001",
+      "service": "iMessage",
+      "last_message_at": "2026-08-16T12:01:00Z",
+      "is_group": false,
+      "participants": ["+15550000001"],
+      "unread_count": 1
+    },
+    {
+      "id": 8,
+      "name": "Synthetic fallback",
+      "display_name": "Synthetic Group",
+      "identifier": "synthetic-group",
+      "service": "Other",
+      "last_message_at": "2026-08-16T12:02:00Z",
+      "is_group": true,
+      "participants": ["+15550000002", "+15550000003"]
+    }
+  ]
+}

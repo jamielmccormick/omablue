@@ -1,0 +1,38 @@
+import Darwin
+import Foundation
+
+func loadSourceIdentity() throws -> SourceIdentity {
+    let home = FileManager.default.homeDirectoryForCurrentUser
+    let stateDirectory = home.appendingPathComponent(
+        "Library/Application Support/OmaBlue",
+        isDirectory: true
+    )
+    try FileManager.default.createDirectory(
+        at: stateDirectory,
+        withIntermediateDirectories: true,
+        attributes: [.posixPermissions: 0o700]
+    )
+
+    let instanceURL = stateDirectory.appendingPathComponent("source-instance")
+    let instance: String
+    if let stored = try? String(contentsOf: instanceURL, encoding: .utf8),
+       UUID(uuidString: stored.trimmingCharacters(in: .whitespacesAndNewlines)) != nil
+    {
+        instance = stored.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+    } else {
+        instance = UUID().uuidString.lowercased()
+        try Data("\(instance)\n".utf8).write(to: instanceURL, options: .atomic)
+        try FileManager.default.setAttributes(
+            [.posixPermissions: 0o600],
+            ofItemAtPath: instanceURL.path
+        )
+    }
+
+    let databasePath = home.appendingPathComponent("Library/Messages/chat.db").path
+    var databaseStat = stat()
+    guard Darwin.stat(databasePath, &databaseStat) == 0 else {
+        throw AdapterFailure(code: "database_unavailable", retryable: true)
+    }
+    let generation = String(format: "%llx:%llx", UInt64(databaseStat.st_dev), databaseStat.st_ino)
+    return SourceIdentity(instance: instance, databaseGeneration: generation)
+}

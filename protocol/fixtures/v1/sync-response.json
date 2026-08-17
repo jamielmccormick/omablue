@@ -49,7 +49,7 @@
       "reply_to": "message-example-1",
       "attachments": [
         {
-          "id": "attachment-example",
+          "id": null,
           "media_type": "image/png",
           "byte_count": 1024,
           "display_name": "example.png",

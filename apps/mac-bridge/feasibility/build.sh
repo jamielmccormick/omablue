@@ -32,6 +32,21 @@ xcrun --sdk macosx swiftc \
   "$root/Sources/Agent/main.swift" \
   -o "$contents/MacOS/OmaBlueFeasibilityAgent"
 
+xcrun --sdk macosx swiftc \
+  -framework Foundation \
+  "$root/../adapter/Sources/AdapterCore.swift" \
+  "$root/../adapter/Sources/IMsgRPC.swift" \
+  "$root/../adapter/Sources/SourceIdentity.swift" \
+  "$root/../adapter/Sources/main.swift" \
+  -o "$contents/MacOS/OmaBlueIMsgAdapter"
+
+xcrun --sdk macosx swiftc \
+  -framework Foundation \
+  "$root/../adapter/Sources/AdapterCore.swift" \
+  "$root/../adapter/Tests/main.swift" \
+  -o "$build_dir/OmaBlueAdapterTests"
+"$build_dir/OmaBlueAdapterTests" "$root/../adapter/Fixtures"
+
 cp "$root/Resources/Info.plist" "$contents/Info.plist"
 cp \
   "$root/Resources/com.jamielmccormick.omablue.feasibility-agent.plist" \
@@ -59,6 +74,9 @@ fi
 codesign "${sign_args[@]}" \
   --entitlements "$root/Resources/Agent.entitlements" \
   "$contents/MacOS/OmaBlueFeasibilityAgent"
+codesign "${sign_args[@]}" \
+  --entitlements "$root/Resources/Controller.entitlements" \
+  "$contents/MacOS/OmaBlueIMsgAdapter"
 codesign "${sign_args[@]}" \
   --entitlements "$root/Resources/Controller.entitlements" \
   "$app"

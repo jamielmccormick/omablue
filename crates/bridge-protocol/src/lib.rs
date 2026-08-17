@@ -128,10 +128,24 @@ pub struct Event {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "event_type", rename_all = "snake_case")]
 pub enum EventPayload {
-    ConversationUpsert { conversation: Conversation },
-    MessageUpsert { message: Message },
-    MessageDeleted { message_id: String },
-    ResyncRequired { reason: ResyncReason },
+    ConversationUpsert {
+        conversation: Conversation,
+    },
+    MessageUpsert {
+        message: Message,
+    },
+    MessageDeleted {
+        message_id: String,
+    },
+    ReactionChanged {
+        message_id: String,
+        actor_id: Option<String>,
+        kind: ReactionKind,
+        active: bool,
+    },
+    ResyncRequired {
+        reason: ResyncReason,
+    },
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -146,9 +160,9 @@ pub enum ResyncReason {
 pub struct Conversation {
     pub id: String,
     pub title: Option<String>,
-    pub service: Service,
+    pub service: Option<Service>,
     pub participants: Vec<Participant>,
-    pub unread_count: u32,
+    pub unread_count: Option<u32>,
     pub last_message_at: Option<String>,
 }
 
@@ -192,7 +206,7 @@ pub enum Direction {
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Attachment {
-    pub id: String,
+    pub id: Option<String>,
     pub media_type: Option<String>,
     pub byte_count: u64,
     pub display_name: Option<String>,
@@ -201,7 +215,7 @@ pub struct Attachment {
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Reaction {
-    pub actor_id: String,
+    pub actor_id: Option<String>,
     pub kind: ReactionKind,
 }
 

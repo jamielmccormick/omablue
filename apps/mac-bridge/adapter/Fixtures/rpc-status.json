@@ -1,0 +1,25 @@
+{
+  "version": "0.14.1",
+  "protocol_version": 1,
+  "database": {
+    "path": "/synthetic/Messages/chat.db",
+    "ready": true,
+    "features": {
+      "unread_state": true,
+      "scheduled_messages": true,
+      "reactions": true,
+      "reply_context": true,
+      "routing_metadata": true,
+      "balloon_payloads": true
+    }
+  },
+  "bridge": {
+    "ready": false,
+    "error": "synthetic bridge disabled"
+  },
+  "contacts": {
+    "available": false
+  },
+  "methods": ["initialize", "status", "chats.list", "messages.after", "watch.subscribe"],
+  "supported_methods": ["initialize", "status", "chats.list", "messages.after", "watch.subscribe", "send"]
+}
