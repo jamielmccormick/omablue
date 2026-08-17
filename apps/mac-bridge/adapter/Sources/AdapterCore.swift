@@ -107,16 +107,6 @@ func translateStatus(
         throw AdapterFailure(code: "invalid_upstream_status", retryable: true)
     }
     let methodSet = Set(methods)
-    var messages = [[String: Any]]()
-    var events = [[String: Any]]()
-    for rawMessage in rawMessages {
-        if rawMessage["is_reaction"] as? Bool == true {
-            events.append(try translateReactionEvent(rawMessage, source: source))
-        } else {
-            messages.append(try translateMessage(rawMessage))
-        }
-    }
-
     return [
         "request_id": requestID,
         "protocol_version": omaBlueProtocolVersion,
@@ -145,6 +135,16 @@ func translateSync(
         let hasMore = messagesResult["has_more"] as? Bool
     else {
         throw AdapterFailure(code: "invalid_upstream_sync", retryable: true)
+    }
+
+    var messages = [[String: Any]]()
+    var events = [[String: Any]]()
+    for rawMessage in rawMessages {
+        if rawMessage["is_reaction"] as? Bool == true {
+            events.append(try translateReactionEvent(rawMessage, source: source))
+        } else {
+            messages.append(try translateMessage(rawMessage))
+        }
     }
 
     return [
