@@ -39,6 +39,7 @@ required_files=(
   protocol/fixtures/v1/status-response.json
   protocol/fixtures/v1/sync-response.json
   protocol/fixtures/v1/message-event.json
+  docs/findings/2026-08-17-watch-recovery.md
 )
 
 for file in "${required_files[@]}"; do
