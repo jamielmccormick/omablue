@@ -23,6 +23,7 @@ required_files=(
   apps/mac-bridge/adapter/Sources/IMsgRPC.swift
   apps/mac-bridge/adapter/Sources/SourceIdentity.swift
   apps/mac-bridge/adapter/Sources/main.swift
+  apps/mac-bridge/adapter/README.md
   apps/mac-bridge/adapter/Tests/main.swift
   apps/mac-bridge/adapter/Fixtures/rpc-status.json
   apps/mac-bridge/adapter/Fixtures/rpc-chats.json
