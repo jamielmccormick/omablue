@@ -1,4 +1,3 @@
-import Darwin
 import Foundation
 
 func loadSourceIdentity() throws -> SourceIdentity {
@@ -29,10 +28,18 @@ func loadSourceIdentity() throws -> SourceIdentity {
     }
 
     let databasePath = home.appendingPathComponent("Library/Messages/chat.db").path
-    var databaseStat = stat()
-    guard Darwin.stat(databasePath, &databaseStat) == 0 else {
+    let attributes: [FileAttributeKey: Any]
+    do {
+        attributes = try FileManager.default.attributesOfItem(atPath: databasePath)
+    } catch {
         throw AdapterFailure(code: "database_unavailable", retryable: true)
     }
-    let generation = String(format: "%llx:%llx", UInt64(databaseStat.st_dev), databaseStat.st_ino)
+    guard
+        let device = attributes[.systemNumber] as? NSNumber,
+        let inode = attributes[.systemFileNumber] as? NSNumber
+    else {
+        throw AdapterFailure(code: "database_identity_unavailable", retryable: true)
+    }
+    let generation = String(format: "%llx:%llx", device.uint64Value, inode.uint64Value)
     return SourceIdentity(instance: instance, databaseGeneration: generation)
 }
