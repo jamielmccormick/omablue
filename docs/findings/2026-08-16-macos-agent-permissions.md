@@ -31,6 +31,7 @@ version and did not retain the returned value or send a message.
 | Kill and automatic agent relaunch | Pass; PID changed and both permissions remained usable |
 | Explicit unregister/register | Pass; agent stopped, restarted, and both permissions remained usable |
 | Status file permissions | Pass; mode `0600` |
+| Replace changed bundle without incrementing `CFBundleVersion` | Fails closed with `EX_CONFIG` and `needs LWCR update` |
 
 ## Architectural Evidence
 
@@ -41,6 +42,11 @@ OmaBlue application. The main controller does not need to remain running.
 This does not yet prove that an `imsg rpc` child inherits the same responsible
 identity, that a Developer ID update preserves consent, or that permissions
 survive logout, reboot, and sleep/wake. Those remain release gates.
+
+macOS also requires each changed background-item bundle to advance its build
+number. OmaBlue release tooling must reject a non-increasing
+`CFBundleVersion`; replacing changed code under the same value leaves the
+registered job enabled but unable to spawn.
 
 ## Follow-up
 

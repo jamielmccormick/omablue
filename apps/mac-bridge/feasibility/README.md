@@ -44,6 +44,13 @@ OMABLUE_INCLUDE_IMSG=1 ./build.sh
 The fetch script intentionally excludes `imsg-bridge-helper.dylib`; OmaBlue does
 not ship or test the injected private-API bridge.
 
+Every installed update must use a higher bundle build number so macOS refreshes
+the background item's launch constraint:
+
+```sh
+OMABLUE_BUILD_NUMBER=2 OMABLUE_INCLUDE_IMSG=1 ./build.sh
+```
+
 The app is produced under `dist/`. Copy it to `/Applications` before registering
 the agent so subsequent runs use a stable path and code identity.
 

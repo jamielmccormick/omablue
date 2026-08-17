@@ -8,6 +8,7 @@ app="$dist_dir/OmaBlue Feasibility.app"
 contents="$app/Contents"
 identity="${OMABLUE_CODESIGN_IDENTITY:--}"
 include_imsg="${OMABLUE_INCLUDE_IMSG:-0}"
+build_number="${OMABLUE_BUILD_NUMBER:-1}"
 
 for command_name in xcrun codesign plutil; do
   command -v "$command_name" >/dev/null 2>&1 || {
@@ -35,6 +36,8 @@ cp "$root/Resources/Info.plist" "$contents/Info.plist"
 cp \
   "$root/Resources/com.jamielmccormick.omablue.feasibility-agent.plist" \
   "$contents/Library/LaunchAgents/"
+
+plutil -replace CFBundleVersion -string "$build_number" "$contents/Info.plist"
 
 if [[ $include_imsg == "1" ]]; then
   imsg_source="$($root/fetch-imsg.sh)"
