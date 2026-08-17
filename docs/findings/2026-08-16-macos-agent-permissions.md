@@ -34,6 +34,7 @@ version and did not retain the returned value or send a message.
 | Replace changed bundle without incrementing `CFBundleVersion` | Fails closed with `EX_CONFIG` and `needs LWCR update` |
 | Replace ad-hoc signed bundle with incremented build | Agent launches; FDA consent does not persist across the changed ad-hoc code identity |
 | Resource lookup from LaunchAgent `argv[0]` | `argv[0]` is relative; bundle resources must resolve through `Bundle.main` |
+| Repeating Foundation timer after reboot clock adjustment | Did not fire reliably in the headless agent; replaced with a deterministic sleep loop |
 
 ## Architectural Evidence
 

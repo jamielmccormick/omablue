@@ -58,14 +58,22 @@ private func imsgProbe() -> (Bool, String?, Bool?, Int32?) {
 
     let process = Process()
     let output = Pipe()
+    let finished = DispatchSemaphore(value: 0)
     process.executableURL = executable
     process.arguments = ["status", "--json"]
     process.standardOutput = output
     process.standardError = FileHandle.nullDevice
+    process.terminationHandler = { _ in
+        finished.signal()
+    }
 
     do {
         try process.run()
-        process.waitUntilExit()
+        if finished.wait(timeout: .now() + 5) == .timedOut {
+            process.terminate()
+            _ = finished.wait(timeout: .now() + 1)
+            return (true, nil, nil, nil)
+        }
         let data = output.fileHandleForReading.readDataToEndOfFile()
         guard
             let object = try JSONSerialization.jsonObject(with: data) as? [String: Any]
@@ -132,10 +140,7 @@ private func runProbe() {
     }
 }
 
-runProbe()
-
-let timer = Timer(timeInterval: 30, repeats: true) { _ in
+while true {
     runProbe()
+    Thread.sleep(forTimeInterval: 30)
 }
-RunLoop.main.add(timer, forMode: .common)
-RunLoop.main.run()
