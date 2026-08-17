@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Setup questions and ideas
+    url: https://github.com/jamielmccormick/omablue/discussions
+    about: Use Discussions for support and product ideas.
+  - name: Security vulnerability
+    url: https://github.com/jamielmccormick/omablue/security/advisories/new
+    about: Report security issues privately. Never include personal message data.
