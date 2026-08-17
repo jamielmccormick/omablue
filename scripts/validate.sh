@@ -18,6 +18,7 @@ required_files=(
   docs/threat-model.md
   plugin/manifest.json
   apps/mac-bridge/feasibility/build.sh
+  apps/mac-bridge/feasibility/fetch-imsg.sh
 )
 
 for file in "${required_files[@]}"; do

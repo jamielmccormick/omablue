@@ -37,6 +37,21 @@ runtime.
 | Automation revoked | readable | denied and reported | remains healthy |
 | Messages quit | readable | query may relaunch or fail clearly | remains healthy |
 
+## Results to Date
+
+The initial physical Apple silicon test on macOS 26.5.2 passed:
+
+- Agent registration and independent background launch
+- Explicit Full Disk Access denial before consent
+- Database open after granting consent to the containing app
+- Messages application-version Apple Event
+- Agent kill and automatic relaunch with permissions retained
+- Explicit unregister/register with permissions retained
+- Content-free status persistence at mode `0600`
+
+See `docs/findings/2026-08-16-macos-agent-permissions.md` for the environment,
+scope, and remaining limitations.
+
 ## Test Variants
 
 1. Ad-hoc signed development bundle for functional iteration

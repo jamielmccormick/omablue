@@ -11,6 +11,10 @@ private struct ProbeStatus: Codable {
     let databaseErrorCode: Int?
     let messagesAutomationSucceeded: Bool
     let messagesAutomationErrorCode: Int?
+    let imsgAvailable: Bool
+    let imsgVersion: String?
+    let imsgDatabaseReady: Bool?
+    let imsgExitStatus: Int32?
 }
 
 private let iso8601 = ISO8601DateFormatter()
@@ -42,6 +46,45 @@ private func automationProbe() -> (Bool, Int?) {
     return (errorInfo == nil, code)
 }
 
+private func imsgProbe() -> (Bool, String?, Bool?, Int32?) {
+    let executable = URL(fileURLWithPath: CommandLine.arguments[0])
+        .deletingLastPathComponent()
+        .deletingLastPathComponent()
+        .appendingPathComponent("Helpers/imsg/imsg")
+
+    guard FileManager.default.isExecutableFile(atPath: executable.path) else {
+        return (false, nil, nil, nil)
+    }
+
+    let process = Process()
+    let output = Pipe()
+    process.executableURL = executable
+    process.arguments = ["status", "--json"]
+    process.standardOutput = output
+    process.standardError = FileHandle.nullDevice
+
+    do {
+        try process.run()
+        process.waitUntilExit()
+        let data = output.fileHandleForReading.readDataToEndOfFile()
+        guard
+            let object = try JSONSerialization.jsonObject(with: data) as? [String: Any]
+        else {
+            return (true, nil, nil, process.terminationStatus)
+        }
+
+        let database = object["database"] as? [String: Any]
+        return (
+            true,
+            object["version"] as? String,
+            database?["ready"] as? Bool,
+            process.terminationStatus
+        )
+    } catch {
+        return (true, nil, nil, nil)
+    }
+}
+
 private func statusURL() throws -> URL {
     let directory = FileManager.default.homeDirectoryForCurrentUser
         .appendingPathComponent("Library/Application Support/OmaBlue", isDirectory: true)
@@ -56,6 +99,7 @@ private func statusURL() throws -> URL {
 private func runProbe() {
     let database = databaseProbe()
     let automation = automationProbe()
+    let imsg = imsgProbe()
     let status = ProbeStatus(
         schemaVersion: 1,
         checkedAt: iso8601.string(from: Date()),
@@ -65,7 +109,11 @@ private func runProbe() {
         databaseErrorDomain: database.1,
         databaseErrorCode: database.2,
         messagesAutomationSucceeded: automation.0,
-        messagesAutomationErrorCode: automation.1
+        messagesAutomationErrorCode: automation.1,
+        imsgAvailable: imsg.0,
+        imsgVersion: imsg.1,
+        imsgDatabaseReady: imsg.2,
+        imsgExitStatus: imsg.3
     )
 
     do {

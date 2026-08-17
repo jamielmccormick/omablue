@@ -7,6 +7,7 @@ dist_dir="$root/dist"
 app="$dist_dir/OmaBlue Feasibility.app"
 contents="$app/Contents"
 identity="${OMABLUE_CODESIGN_IDENTITY:--}"
+include_imsg="${OMABLUE_INCLUDE_IMSG:-0}"
 
 for command_name in xcrun codesign plutil; do
   command -v "$command_name" >/dev/null 2>&1 || {
@@ -34,6 +35,15 @@ cp "$root/Resources/Info.plist" "$contents/Info.plist"
 cp \
   "$root/Resources/com.jamielmccormick.omablue.feasibility-agent.plist" \
   "$contents/Library/LaunchAgents/"
+
+if [[ $include_imsg == "1" ]]; then
+  imsg_source="$($root/fetch-imsg.sh)"
+  mkdir -p "$contents/Helpers/imsg"
+  cp "$imsg_source/imsg" "$contents/Helpers/imsg/imsg"
+  cp -R "$imsg_source/PhoneNumberKit_PhoneNumberKit.bundle" "$contents/Helpers/imsg/"
+  cp -R "$imsg_source/SQLite.swift_SQLite.bundle" "$contents/Helpers/imsg/"
+  codesign --verify --strict --verbose=2 "$contents/Helpers/imsg/imsg"
+fi
 
 plutil -lint "$contents/Info.plist"
 plutil -lint "$contents/Library/LaunchAgents/com.jamielmccormick.omablue.feasibility-agent.plist"

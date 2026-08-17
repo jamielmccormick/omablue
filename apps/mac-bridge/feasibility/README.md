@@ -35,6 +35,15 @@ For release-equivalent identity testing:
 OMABLUE_CODESIGN_IDENTITY="Developer ID Application: Example (TEAMID)" ./build.sh
 ```
 
+To include the pinned, checksum-verified `imsg v0.14.1` child probe:
+
+```sh
+OMABLUE_INCLUDE_IMSG=1 ./build.sh
+```
+
+The fetch script intentionally excludes `imsg-bridge-helper.dylib`; OmaBlue does
+not ship or test the injected private-API bridge.
+
 The app is produced under `dist/`. Copy it to `/Applications` before registering
 the agent so subsequent runs use a stable path and code identity.
 
