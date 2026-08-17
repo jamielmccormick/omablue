@@ -47,10 +47,10 @@ private func automationProbe() -> (Bool, Int?) {
 }
 
 private func imsgProbe() -> (Bool, String?, Bool?, Int32?) {
-    let executable = URL(fileURLWithPath: CommandLine.arguments[0])
-        .deletingLastPathComponent()
-        .deletingLastPathComponent()
-        .appendingPathComponent("Resources/imsg/imsg")
+    guard let resources = Bundle.main.resourceURL else {
+        return (false, nil, nil, nil)
+    }
+    let executable = resources.appendingPathComponent("imsg/imsg")
 
     guard FileManager.default.isExecutableFile(atPath: executable.path) else {
         return (false, nil, nil, nil)

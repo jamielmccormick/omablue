@@ -32,6 +32,8 @@ version and did not retain the returned value or send a message.
 | Explicit unregister/register | Pass; agent stopped, restarted, and both permissions remained usable |
 | Status file permissions | Pass; mode `0600` |
 | Replace changed bundle without incrementing `CFBundleVersion` | Fails closed with `EX_CONFIG` and `needs LWCR update` |
+| Replace ad-hoc signed bundle with incremented build | Agent launches; FDA consent does not persist across the changed ad-hoc code identity |
+| Resource lookup from LaunchAgent `argv[0]` | `argv[0]` is relative; bundle resources must resolve through `Bundle.main` |
 
 ## Architectural Evidence
 
@@ -47,6 +49,11 @@ macOS also requires each changed background-item bundle to advance its build
 number. OmaBlue release tooling must reject a non-increasing
 `CFBundleVersion`; replacing changed code under the same value leaves the
 registered job enabled but unable to spawn.
+
+The ad-hoc update correctly did not preserve FDA because changing the bundle
+changed its ad-hoc designated requirement. Permission persistence must be tested
+with two builds signed by the same Apple Development or Developer ID identity;
+development results must not be generalized to release updates.
 
 ## Follow-up
 
