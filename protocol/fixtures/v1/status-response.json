@@ -1,0 +1,16 @@
+{
+  "request_id": "req-status-example",
+  "protocol_version": 1,
+  "server_version": "0.1.0",
+  "source": {
+    "instance": "source-example",
+    "database_generation": "generation-example-a"
+  },
+  "capabilities": {
+    "read_messages": true,
+    "watch_messages": true,
+    "send_text": false,
+    "send_attachments": false,
+    "send_reactions": false
+  }
+}

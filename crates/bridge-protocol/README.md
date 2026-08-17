@@ -1,7 +1,11 @@
 # OmaBlue Protocol
 
-Planned versioned domain protocol shared by the Mac bridge and Linux helper.
+Shared Rust models for the versioned OmaBlue wire protocol.
 
-The first schema will define status, sync, watch, send, attachment, generation,
-cursor, idempotency, and error semantics before production implementations are
-written.
+Protocol v1 starts with status, bounded synchronization, generation-scoped
+cursors, conversation projections, message projections, reactions, and opaque
+attachment metadata. It contains no transport, database, or Apple-specific
+filesystem paths.
+
+See `protocol/v1.md` and `protocol/fixtures/` for the normative contract and
+synthetic examples.

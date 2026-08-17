@@ -1,0 +1,75 @@
+{
+  "request_id": "req-sync-example",
+  "protocol_version": 1,
+  "source": {
+    "instance": "source-example",
+    "database_generation": "generation-example-a"
+  },
+  "conversations": [
+    {
+      "id": "conversation-example",
+      "title": null,
+      "service": "imessage",
+      "participants": [
+        {
+          "id": "participant-alex",
+          "display_name": "Alex Example",
+          "avatar_id": null
+        }
+      ],
+      "unread_count": 1,
+      "last_message_at": "2026-08-16T12:00:30Z"
+    }
+  ],
+  "messages": [
+    {
+      "id": "message-example-1",
+      "source_rowid": 100,
+      "conversation_id": "conversation-example",
+      "direction": "outgoing",
+      "sender_id": null,
+      "text": "Synthetic hello",
+      "sent_at": "2026-08-16T12:00:00Z",
+      "delivered_at": "2026-08-16T12:00:01Z",
+      "read_at": null,
+      "reply_to": null,
+      "attachments": [],
+      "reactions": []
+    },
+    {
+      "id": "message-example-2",
+      "source_rowid": 101,
+      "conversation_id": "conversation-example",
+      "direction": "incoming",
+      "sender_id": "participant-alex",
+      "text": "Synthetic reply",
+      "sent_at": "2026-08-16T12:00:30Z",
+      "delivered_at": null,
+      "read_at": null,
+      "reply_to": "message-example-1",
+      "attachments": [
+        {
+          "id": "attachment-example",
+          "media_type": "image/png",
+          "byte_count": 1024,
+          "display_name": "example.png",
+          "available": true
+        }
+      ],
+      "reactions": [
+        {
+          "actor_id": "participant-alex",
+          "kind": {
+            "type": "like"
+          }
+        }
+      ]
+    }
+  ],
+  "next_cursor": {
+    "source_instance": "source-example",
+    "database_generation": "generation-example-a",
+    "rowid": 101
+  },
+  "has_more": false
+}

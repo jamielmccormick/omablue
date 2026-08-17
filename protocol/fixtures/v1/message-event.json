@@ -1,0 +1,25 @@
+{
+  "protocol_version": 1,
+  "event_id": "event-message-example",
+  "cursor": {
+    "source_instance": "source-example",
+    "database_generation": "generation-example-a",
+    "rowid": 102
+  },
+  "recorded_at": "2026-08-16T12:01:00Z",
+  "event_type": "message_upsert",
+  "message": {
+    "id": "message-example-3",
+    "source_rowid": 102,
+    "conversation_id": "conversation-example",
+    "direction": "incoming",
+    "sender_id": "participant-alex",
+    "text": "Synthetic event",
+    "sent_at": "2026-08-16T12:01:00Z",
+    "delivered_at": null,
+    "read_at": null,
+    "reply_to": null,
+    "attachments": [],
+    "reactions": []
+  }
+}

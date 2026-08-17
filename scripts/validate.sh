@@ -19,6 +19,12 @@ required_files=(
   plugin/manifest.json
   apps/mac-bridge/feasibility/build.sh
   apps/mac-bridge/feasibility/fetch-imsg.sh
+  Cargo.toml
+  crates/bridge-protocol/Cargo.toml
+  protocol/v1.md
+  protocol/fixtures/v1/status-response.json
+  protocol/fixtures/v1/sync-response.json
+  protocol/fixtures/v1/message-event.json
 )
 
 for file in "${required_files[@]}"; do
@@ -27,6 +33,11 @@ for file in "${required_files[@]}"; do
     exit 1
   }
 done
+
+jq empty \
+  "$repo_root/protocol/fixtures/v1/status-response.json" \
+  "$repo_root/protocol/fixtures/v1/sync-response.json" \
+  "$repo_root/protocol/fixtures/v1/message-event.json"
 
 if command -v xmllint >/dev/null 2>&1; then
   xmllint --noout \
