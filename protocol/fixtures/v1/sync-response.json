@@ -66,6 +66,7 @@
       ]
     }
   ],
+  "events": [],
   "next_cursor": {
     "source_instance": "source-example",
     "database_generation": "generation-example-a",

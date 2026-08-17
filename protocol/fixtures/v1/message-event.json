@@ -8,6 +8,7 @@
   },
   "recorded_at": "2026-08-16T12:01:00Z",
   "event_type": "message_upsert",
+  "conversation": null,
   "message": {
     "id": "message-example-3",
     "source_rowid": 102,

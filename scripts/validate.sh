@@ -21,10 +21,15 @@ required_files=(
   apps/mac-bridge/feasibility/fetch-imsg.sh
   apps/mac-bridge/adapter/Sources/AdapterCore.swift
   apps/mac-bridge/adapter/Sources/IMsgRPC.swift
+  apps/mac-bridge/adapter/Sources/PersistentIMsgRPC.swift
   apps/mac-bridge/adapter/Sources/SourceIdentity.swift
+  apps/mac-bridge/adapter/Sources/WatchBridge.swift
   apps/mac-bridge/adapter/Sources/main.swift
   apps/mac-bridge/adapter/README.md
   apps/mac-bridge/adapter/Tests/main.swift
+  apps/mac-bridge/adapter/Tests/FakeIMsg/main.swift
+  apps/mac-bridge/adapter/Tests/PersistentRPC/main.swift
+  apps/mac-bridge/adapter/Tests/WatchBridge/main.swift
   apps/mac-bridge/adapter/Fixtures/rpc-status.json
   apps/mac-bridge/adapter/Fixtures/rpc-chats.json
   apps/mac-bridge/adapter/Fixtures/rpc-messages-after.json

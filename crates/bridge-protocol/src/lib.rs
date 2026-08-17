@@ -111,6 +111,7 @@ pub struct SyncResponse {
     pub source: Source,
     pub conversations: Vec<Conversation>,
     pub messages: Vec<Message>,
+    pub events: Vec<Event>,
     pub next_cursor: Cursor,
     pub has_more: bool,
 }
@@ -132,7 +133,8 @@ pub enum EventPayload {
         conversation: Conversation,
     },
     MessageUpsert {
-        message: Message,
+        message: Box<Message>,
+        conversation: Option<Box<Conversation>>,
     },
     MessageDeleted {
         message_id: String,

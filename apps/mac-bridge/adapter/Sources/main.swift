@@ -14,11 +14,7 @@ private func rpcRequest(id: String, method: String, params: [String: Any] = [:])
     ["jsonrpc": "2.0", "id": id, "method": method, "params": params]
 }
 
-private func run() throws -> [String: Any] {
-    guard let input = try FileHandle.standardInput.read(upToCount: 65_537), !input.isEmpty else {
-        throw AdapterFailure(code: "invalid_request", retryable: false)
-    }
-    let request = try parseRequest(input)
+private func runRequest(_ request: AdapterRequest) throws -> [String: Any] {
     let source = try loadSourceIdentity()
     let rpc = IMsgRPC(executable: try imsgURL())
 
@@ -42,7 +38,7 @@ private func run() throws -> [String: Any] {
                     "limit": limit,
                     "attachments": true,
                     "convert_attachments": false,
-                    "include_reactions": false,
+                    "include_reactions": true,
                 ]
             ),
         ])
@@ -55,13 +51,39 @@ private func run() throws -> [String: Any] {
             chatsResult: chats,
             messagesResult: messages
         )
+    case .watch:
+        throw AdapterFailure(code: "watch_requires_stream", retryable: false)
     }
 }
 
+private func runWatch(_ request: AdapterRequest) throws {
+    guard case let .watch(_, cursor) = request else {
+        throw AdapterFailure(code: "invalid_watch_request", retryable: false)
+    }
+    let source = try loadSourceIdentity()
+    let bridge = WatchBridge(
+        executable: try imsgURL(),
+        initialSource: source,
+        initialCursor: cursor
+    ) { event in
+        let data = try JSONSerialization.data(withJSONObject: event, options: [.sortedKeys])
+        try FileHandle.standardOutput.write(contentsOf: data + Data([0x0A]))
+    }
+    try bridge.run()
+}
+
 do {
-    let response = try run()
-    let data = try JSONSerialization.data(withJSONObject: response, options: [.sortedKeys])
-    try FileHandle.standardOutput.write(contentsOf: data + Data([0x0A]))
+    guard let input = try FileHandle.standardInput.read(upToCount: 65_537), !input.isEmpty else {
+        throw AdapterFailure(code: "invalid_request", retryable: false)
+    }
+    let request = try parseRequest(input)
+    if case .watch = request {
+        try runWatch(request)
+    } else {
+        let response = try runRequest(request)
+        let data = try JSONSerialization.data(withJSONObject: response, options: [.sortedKeys])
+        try FileHandle.standardOutput.write(contentsOf: data + Data([0x0A]))
+    }
 } catch let failure as AdapterFailure {
     let data = try JSONSerialization.data(
         withJSONObject: errorResponse(requestID: nil, failure: failure),

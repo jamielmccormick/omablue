@@ -35,8 +35,10 @@ do {
     )
     let conversations = sync["conversations"] as? [[String: Any]]
     let messages = sync["messages"] as? [[String: Any]]
+    let events = sync["events"] as? [[String: Any]]
     check(conversations?.count == 2, "conversation count")
     check(messages?.count == 2, "message count")
+    check(events?.isEmpty == true, "event count")
     check(conversations?[1]["service"] is NSNull, "unknown service remains null")
     check(conversations?[1]["unread_count"] is NSNull, "missing unread remains null")
 

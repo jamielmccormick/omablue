@@ -36,7 +36,9 @@ xcrun --sdk macosx swiftc \
   -framework Foundation \
   "$root/../adapter/Sources/AdapterCore.swift" \
   "$root/../adapter/Sources/IMsgRPC.swift" \
+  "$root/../adapter/Sources/PersistentIMsgRPC.swift" \
   "$root/../adapter/Sources/SourceIdentity.swift" \
+  "$root/../adapter/Sources/WatchBridge.swift" \
   "$root/../adapter/Sources/main.swift" \
   -o "$contents/MacOS/OmaBlueIMsgAdapter"
 
@@ -46,6 +48,27 @@ xcrun --sdk macosx swiftc \
   "$root/../adapter/Tests/main.swift" \
   -o "$build_dir/OmaBlueAdapterTests"
 "$build_dir/OmaBlueAdapterTests" "$root/../adapter/Fixtures"
+
+xcrun --sdk macosx swiftc \
+  -framework Foundation \
+  "$root/../adapter/Tests/FakeIMsg/main.swift" \
+  -o "$build_dir/FakeIMsg"
+xcrun --sdk macosx swiftc \
+  -framework Foundation \
+  "$root/../adapter/Sources/AdapterCore.swift" \
+  "$root/../adapter/Sources/PersistentIMsgRPC.swift" \
+  "$root/../adapter/Tests/PersistentRPC/main.swift" \
+  -o "$build_dir/OmaBluePersistentRPCTests"
+"$build_dir/OmaBluePersistentRPCTests" "$build_dir/FakeIMsg"
+xcrun --sdk macosx swiftc \
+  -framework Foundation \
+  "$root/../adapter/Sources/AdapterCore.swift" \
+  "$root/../adapter/Sources/PersistentIMsgRPC.swift" \
+  "$root/../adapter/Sources/SourceIdentity.swift" \
+  "$root/../adapter/Sources/WatchBridge.swift" \
+  "$root/../adapter/Tests/WatchBridge/main.swift" \
+  -o "$build_dir/OmaBlueWatchBridgeTests"
+"$build_dir/OmaBlueWatchBridgeTests" "$build_dir/FakeIMsg"
 
 cp "$root/Resources/Info.plist" "$contents/Info.plist"
 cp \

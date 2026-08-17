@@ -19,10 +19,11 @@ struct SourceIdentity {
 enum AdapterRequest {
     case status(requestID: String)
     case sync(requestID: String, cursor: [String: Any]?, limit: Int)
+    case watch(requestID: String, cursor: [String: Any])
 
     var requestID: String {
         switch self {
-        case let .status(requestID), let .sync(requestID, _, _):
+        case let .status(requestID), let .sync(requestID, _, _), let .watch(requestID, _):
             requestID
         }
     }
@@ -74,6 +75,14 @@ func parseRequest(_ data: Data) throws -> AdapterRequest {
             throw AdapterFailure(code: "invalid_cursor", retryable: false)
         }
         return .sync(requestID: requestID, cursor: cursor, limit: limit)
+    case "watch":
+        guard Set(request.keys) == Set(["type", "request_id", "protocol_version", "cursor"]),
+              let cursor = request["cursor"] as? [String: Any],
+              Set(cursor.keys) == Set(["source_instance", "database_generation", "rowid"])
+        else {
+            throw AdapterFailure(code: "invalid_watch_request", retryable: false)
+        }
+        return .watch(requestID: requestID, cursor: cursor)
     default:
         throw AdapterFailure(code: "unsupported_request", retryable: false)
     }
@@ -98,6 +107,16 @@ func translateStatus(
         throw AdapterFailure(code: "invalid_upstream_status", retryable: true)
     }
     let methodSet = Set(methods)
+    var messages = [[String: Any]]()
+    var events = [[String: Any]]()
+    for rawMessage in rawMessages {
+        if rawMessage["is_reaction"] as? Bool == true {
+            events.append(try translateReactionEvent(rawMessage, source: source))
+        } else {
+            messages.append(try translateMessage(rawMessage))
+        }
+    }
+
     return [
         "request_id": requestID,
         "protocol_version": omaBlueProtocolVersion,
@@ -133,7 +152,8 @@ func translateSync(
         "protocol_version": omaBlueProtocolVersion,
         "source": source.json,
         "conversations": try rawChats.map(translateChat),
-        "messages": try rawMessages.map(translateMessage),
+        "messages": messages,
+        "events": events,
         "next_cursor": [
             "source_instance": source.instance,
             "database_generation": source.databaseGeneration,
@@ -189,7 +209,7 @@ private func translateChat(_ chat: [String: Any]) throws -> [String: Any] {
     ]
 }
 
-private func translateMessage(_ message: [String: Any]) throws -> [String: Any] {
+func translateMessage(_ message: [String: Any]) throws -> [String: Any] {
     guard
         let rowID = unsignedInteger(message["id"]),
         let chatID = integer(message["chat_id"]),
@@ -219,6 +239,101 @@ private func translateMessage(_ message: [String: Any]) throws -> [String: Any] 
         ),
         "attachments": try attachments.map(translateAttachment),
         "reactions": try reactions.map(translateReaction),
+    ]
+}
+
+func translateReactionEvent(
+    _ message: [String: Any],
+    source: SourceIdentity
+) throws -> [String: Any] {
+    guard
+        let rowID = unsignedInteger(message["id"]),
+        let target = nonemptyString(message["reacted_to_guid"]),
+        let active = message["is_reaction_add"] as? Bool
+    else {
+        throw AdapterFailure(code: "invalid_upstream_reaction_event", retryable: true)
+    }
+    let rawType = nonemptyString(message["reaction_type"]) ?? "custom"
+    let reaction: [String: Any]
+    if rawType == "custom" {
+        guard let emoji = nonemptyString(message["reaction_emoji"]) else {
+            throw AdapterFailure(code: "invalid_upstream_reaction_event", retryable: true)
+        }
+        reaction = ["type": "emoji", "value": emoji]
+    } else {
+        reaction = ["type": rawType]
+    }
+    return [
+        "protocol_version": omaBlueProtocolVersion,
+        "event_id": "reaction:\(source.instance):\(source.databaseGeneration):\(rowID)",
+        "cursor": [
+            "source_instance": source.instance,
+            "database_generation": source.databaseGeneration,
+            "rowid": rowID,
+        ],
+        "recorded_at": ISO8601DateFormatter().string(from: Date()),
+        "event_type": "reaction_changed",
+        "message_id": target,
+        "actor_id": jsonValue(nonemptyString(message["sender"])),
+        "kind": reaction,
+        "active": active,
+    ]
+}
+
+func translateMessageEvent(
+    _ rawMessage: [String: Any],
+    source: SourceIdentity
+) throws -> [String: Any] {
+    guard let rowID = unsignedInteger(rawMessage["id"]) else {
+        throw AdapterFailure(code: "invalid_upstream_message", retryable: true)
+    }
+    if rawMessage["is_reaction"] as? Bool == true {
+        return try translateReactionEvent(rawMessage, source: source)
+    }
+    return [
+        "protocol_version": omaBlueProtocolVersion,
+        "event_id": "message:\(source.instance):\(source.databaseGeneration):\(rowID)",
+        "cursor": [
+            "source_instance": source.instance,
+            "database_generation": source.databaseGeneration,
+            "rowid": rowID,
+        ],
+        "recorded_at": ISO8601DateFormatter().string(from: Date()),
+        "event_type": "message_upsert",
+        "message": try translateMessage(rawMessage),
+        "conversation": try translateConversationFromMessage(rawMessage),
+    ]
+}
+
+func resyncRequiredEvent(cursor: [String: Any], source: SourceIdentity) -> [String: Any] {
+    [
+        "protocol_version": omaBlueProtocolVersion,
+        "event_id": "resync:\(source.instance):\(source.databaseGeneration)",
+        "cursor": cursor,
+        "recorded_at": ISO8601DateFormatter().string(from: Date()),
+        "event_type": "resync_required",
+        "reason": "database_generation_changed",
+    ]
+}
+
+private func translateConversationFromMessage(_ message: [String: Any]) throws -> [String: Any] {
+    guard
+        let chatID = integer(message["chat_id"]),
+        let participants = message["participants"] as? [String],
+        let createdAt = message["created_at"] as? String
+    else {
+        throw AdapterFailure(code: "invalid_upstream_message_chat", retryable: true)
+    }
+    let participantModels: [[String: Any]] = participants.map {
+        ["id": $0, "display_name": NSNull(), "avatar_id": NSNull()]
+    }
+    return [
+        "id": "chat:\(chatID)",
+        "title": jsonValue(nonemptyString(message["chat_name"])),
+        "service": NSNull(),
+        "participants": participantModels,
+        "unread_count": NSNull(),
+        "last_message_at": createdAt,
     ]
 }
 
