@@ -14,8 +14,10 @@ required_files=(
   GOVERNANCE.md
   CONTRIBUTING.md
   docs/plans/2026-08-16-omablue-product-plan.md
+  docs/plans/2026-08-16-macos-tcc-feasibility-plan.md
   docs/threat-model.md
   plugin/manifest.json
+  apps/mac-bridge/feasibility/build.sh
 )
 
 for file in "${required_files[@]}"; do
@@ -24,5 +26,13 @@ for file in "${required_files[@]}"; do
     exit 1
   }
 done
+
+if command -v xmllint >/dev/null 2>&1; then
+  xmllint --noout \
+    "$repo_root/apps/mac-bridge/feasibility/Resources/Info.plist" \
+    "$repo_root/apps/mac-bridge/feasibility/Resources/com.jamielmccormick.omablue.feasibility-agent.plist" \
+    "$repo_root/apps/mac-bridge/feasibility/Resources/Controller.entitlements" \
+    "$repo_root/apps/mac-bridge/feasibility/Resources/Agent.entitlements"
+fi
 
 printf 'OmaBlue repository validation passed.\n'

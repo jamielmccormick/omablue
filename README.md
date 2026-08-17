@@ -42,9 +42,11 @@ require disabling SIP or injecting into Messages are intentionally excluded.
 
 ## Status
 
-The first engineering milestone is a macOS feasibility spike covering Full Disk
-Access identity, Messages Automation, login lifecycle, sleep/wake recovery, and
-safe send observation.
+The first engineering milestone is an active macOS feasibility spike covering
+Full Disk Access identity, Messages Automation, login lifecycle, sleep/wake
+recovery, and safe send observation. See the
+[test plan](docs/plans/2026-08-16-macos-tcc-feasibility-plan.md) and
+[content-free probe harness](apps/mac-bridge/feasibility/).
 
 ## License
 

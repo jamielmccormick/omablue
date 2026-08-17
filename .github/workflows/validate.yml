@@ -17,3 +17,20 @@ jobs:
 
       - name: Validate repository
         run: ./scripts/validate.sh
+
+  macos-feasibility-harness:
+    runs-on: macos-15
+    steps:
+      - name: Check out source
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+
+      - name: Build ad-hoc signed feasibility app
+        run: ./apps/mac-bridge/feasibility/build.sh
+
+      - name: Inspect bundle signatures and entitlements
+        run: |
+          app="apps/mac-bridge/feasibility/dist/OmaBlue Feasibility.app"
+          codesign --verify --deep --strict --verbose=2 "$app"
+          codesign --display --entitlements :- "$app/Contents/MacOS/OmaBlueFeasibilityAgent"
+          plutil -lint "$app/Contents/Info.plist"
+          plutil -lint "$app/Contents/Library/LaunchAgents/com.jamielmccormick.omablue.feasibility-agent.plist"
