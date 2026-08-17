@@ -45,6 +45,22 @@ The fake upstream produces:
 The adapter emits deterministic events in 11, 12, 13 order. The test also
 verifies a notification arriving while a read response is pending.
 
+## Signed Physical Verification
+
+Team-signed build 7 ran the installed adapter on the physical Apple silicon Mac
+against the same synthetic upstream. The output was reduced before display to
+event type and cursor only:
+
+```text
+message_upsert 11
+message_upsert 12
+message_upsert 13
+```
+
+This verified catch-up, live delivery, overflow recovery, stable same-team FDA,
+and the installed bundle path without reading or persisting personal message
+payloads.
+
 ## Acknowledgment Limitation
 
 Protocol v1 has no server-side cursor acknowledgment. The adapter's successful
