@@ -37,9 +37,9 @@ private func automationProbe() -> (Bool, Int?) {
     }
 
     var errorInfo: NSDictionary?
-    let result = script.executeAndReturnError(&errorInfo)
+    _ = script.executeAndReturnError(&errorInfo)
     let code = errorInfo?[NSAppleScript.errorNumber] as? Int
-    return (result != nil, code)
+    return (errorInfo == nil, code)
 }
 
 private func statusURL() throws -> URL {
