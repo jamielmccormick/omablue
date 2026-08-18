@@ -1,5 +1,22 @@
 import Foundation
 
+func normalizedContactKeys(_ value: String) -> [String] {
+    let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+    guard !trimmed.isEmpty else { return [] }
+
+    if trimmed.contains("@") {
+        return ["email:\(trimmed)"]
+    }
+
+    let digits = trimmed.filter { $0.isNumber }
+    guard digits.count >= 7 else { return [] }
+    var keys = ["phone:\(digits)"]
+    if digits.count > 10 {
+        keys.append("phone:\(digits.suffix(10))")
+    }
+    return keys
+}
+
 let omaBlueProtocolVersion = 1
 let omaBlueServerVersion = "0.1.0"
 let omaBlueMaxSyncLimit = 500
@@ -126,7 +143,8 @@ func translateSync(
     requestID: String,
     source: SourceIdentity,
     chatsResult: [String: Any],
-    messagesResult: [String: Any]
+    messagesResult: [String: Any],
+    contactNames: [String: String] = [:]
 ) throws -> [String: Any] {
     guard
         let rawChats = chatsResult["chats"] as? [[String: Any]],
@@ -151,7 +169,7 @@ func translateSync(
         "request_id": requestID,
         "protocol_version": omaBlueProtocolVersion,
         "source": source.json,
-        "conversations": try rawChats.map(translateChat),
+        "conversations": try rawChats.map { try translateChat($0, contactNames: contactNames) },
         "messages": messages,
         "events": events,
         "next_cursor": [
@@ -174,7 +192,7 @@ func validateCursor(_ cursor: [String: Any], source: SourceIdentity) throws -> U
     return rowID
 }
 
-private func translateChat(_ chat: [String: Any]) throws -> [String: Any] {
+private func translateChat(_ chat: [String: Any], contactNames: [String: String]) throws -> [String: Any] {
     guard
         let id = integer(chat["id"]),
         let rawService = chat["service"] as? String,
@@ -184,17 +202,26 @@ private func translateChat(_ chat: [String: Any]) throws -> [String: Any] {
         throw AdapterFailure(code: "invalid_upstream_chat", retryable: true)
     }
 
+    let isGroup = (chat["is_group"] as? Bool) ?? (participants.count > 1)
+    let participantNames = participants.compactMap { participant in
+        normalizedContactKeys(participant).compactMap { contactNames[$0] }.first
+    }
     let contactName = nonemptyString(chat["contact_name"])
-    let title = nonemptyString(chat["display_name"])
+        ?? (!isGroup ? participantNames.first : nil)
+    let groupParticipantTitle: String? = isGroup && !participantNames.isEmpty
+        ? participantNames.joined(separator: ", ")
+        : nil
+    let title: String? = nonemptyString(chat["display_name"])
         ?? contactName
         ?? nonemptyString(chat["name"])
-    let isGroup = (chat["is_group"] as? Bool) ?? (participants.count > 1)
-    let participantModels: [[String: Any]] = participants.map { participant in
-        [
+        ?? groupParticipantTitle
+    let participantModels: [[String: Any]] = participants.enumerated().map { index, participant in
+        let participantName = participantNames.indices.contains(index) ? participantNames[index] : nil
+        return [
             "id": participant,
             "display_name": !isGroup && participants.count == 1
-                ? jsonValue(contactName)
-                : NSNull(),
+                ? jsonValue(participantName ?? nonemptyString(chat["name"]))
+                : jsonValue(participantName),
             "avatar_id": NSNull(),
         ]
     }

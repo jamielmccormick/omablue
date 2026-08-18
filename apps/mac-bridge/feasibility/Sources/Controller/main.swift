@@ -1,4 +1,6 @@
+import AppKit
 import Foundation
+import Contacts
 import ServiceManagement
 
 private let agentPlist = "com.jamielmccormick.omablue.feasibility-agent.plist"
@@ -23,7 +25,40 @@ private func printStatus() {
     print(statusName(service.status))
 }
 
-let command = CommandLine.arguments.dropFirst().first ?? "status"
+private func contactsStatusName(_ status: CNAuthorizationStatus) -> String {
+    switch status {
+    case .authorized:
+        return "authorized"
+    case .notDetermined:
+        return "notDetermined"
+    case .denied:
+        return "denied"
+    case .restricted:
+        return "restricted"
+    @unknown default:
+        return "unknown"
+    }
+}
+
+private func requestContacts() {
+    let store = CNContactStore()
+    guard CNContactStore.authorizationStatus(for: .contacts) == .notDetermined else {
+        print(contactsStatusName(CNContactStore.authorizationStatus(for: .contacts)))
+        return
+    }
+
+    let application = NSApplication.shared
+    application.setActivationPolicy(.accessory)
+    store.requestAccess(for: .contacts) { _, _ in
+        DispatchQueue.main.async {
+            print(contactsStatusName(CNContactStore.authorizationStatus(for: .contacts)))
+            application.terminate(nil)
+        }
+    }
+    application.run()
+}
+
+let command = CommandLine.arguments.dropFirst().first ?? "request-contacts"
 
 do {
     switch command {
@@ -39,6 +74,8 @@ do {
         printStatus()
     case "status":
         printStatus()
+    case "request-contacts":
+        requestContacts()
     case "open-settings":
         SMAppService.openSystemSettingsLoginItems()
         printStatus()

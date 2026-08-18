@@ -42,5 +42,6 @@ jobs:
           codesign --verify --deep --strict --verbose=2 "$app"
           codesign --display --entitlements :- "$app/Contents/MacOS/OmaBlueFeasibilityAgent"
           codesign --display --entitlements :- "$app/Contents/MacOS/OmaBlueIMsgAdapter"
+          codesign --display --entitlements :- "$app/Contents/MacOS/OmaBlueBridgeStdio"
           plutil -lint "$app/Contents/Info.plist"
           plutil -lint "$app/Contents/Library/LaunchAgents/com.jamielmccormick.omablue.feasibility-agent.plist"

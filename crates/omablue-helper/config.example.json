@@ -1,0 +1,6 @@
+{
+  "destination": "user@mac-host",
+  "identity_file": "/home/USER/.ssh/omablue_mac.pub",
+  "identity_agent": "/home/USER/.1password/agent.sock",
+  "known_hosts_file": "/home/USER/.ssh/known_hosts"
+}

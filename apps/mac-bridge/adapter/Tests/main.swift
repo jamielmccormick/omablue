@@ -42,6 +42,29 @@ do {
     check(conversations?[1]["service"] is NSNull, "unknown service remains null")
     check(conversations?[1]["unread_count"] is NSNull, "missing unread remains null")
 
+    var contactChats = try fixture("rpc-chats.json")
+    var contactChatRows = contactChats["chats"] as? [[String: Any]] ?? []
+    contactChatRows[1]["display_name"] = ""
+    contactChatRows[1]["name"] = ""
+    contactChats["chats"] = contactChatRows
+
+    let namedSync = try translateSync(
+        requestID: "req-sync-contacts",
+        source: source,
+        chatsResult: contactChats,
+        messagesResult: try fixture("rpc-messages-after.json"),
+        contactNames: [
+            "phone:5550000002": "Sam Contact",
+            "phone:5550000003": "Pat Contact",
+        ]
+    )
+    let namedConversations = namedSync["conversations"] as? [[String: Any]]
+    let namedTitle = namedConversations?[1]["title"] as? String
+    check(namedTitle == "Sam Contact, Pat Contact", "group contact title")
+    let namedParticipants = namedConversations?[1]["participants"] as? [[String: Any]]
+    check(namedParticipants?[0]["display_name"] as? String == "Sam Contact", "first contact participant")
+    check(namedParticipants?[1]["display_name"] as? String == "Pat Contact", "second contact participant")
+
     let attachments = messages?[1]["attachments"] as? [[String: Any]]
     check(attachments?.first?["id"] is NSNull, "attachment id remains null")
     check(attachments?.first?["display_name"] as? String == "example.png", "path is reduced")

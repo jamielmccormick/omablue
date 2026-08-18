@@ -24,5 +24,7 @@
     <true/>
     <key>NSAppleEventsUsageDescription</key>
     <string>OmaBlue checks whether its background agent can communicate with Messages without sending anything.</string>
+    <key>NSContactsUsageDescription</key>
+    <string>OmaBlue uses contact names to identify Messages conversations without displaying phone numbers.</string>
 </dict>
 </plist>

@@ -1,0 +1,3 @@
+# Replace the placeholder key and application path before installing this line.
+# Keep this entry on one line in ~/.ssh/authorized_keys.
+command="/Applications/OmaBlue.app/Contents/MacOS/OmaBlueBridgeStdio",restrict,no-pty,no-agent-forwarding,no-port-forwarding,no-X11-forwarding,no-user-rc ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAREPLACE_WITH_THE_DEDICATED_LINUX_HELPER_KEY omablue-linux-helper

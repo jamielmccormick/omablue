@@ -33,6 +33,23 @@ required_files=(
   apps/mac-bridge/adapter/Fixtures/rpc-status.json
   apps/mac-bridge/adapter/Fixtures/rpc-chats.json
   apps/mac-bridge/adapter/Fixtures/rpc-messages-after.json
+  apps/mac-bridge/ipc/UnixSocket.swift
+  apps/mac-bridge/ipc/CodeIdentity.swift
+  apps/mac-bridge/ipc/BridgeSocketServer.swift
+  apps/mac-bridge/ipc/StdioBridge/main.swift
+  apps/mac-bridge/ipc/Tests/EchoAdapter/main.swift
+  apps/mac-bridge/ipc/Tests/SocketBoundary/main.swift
+  apps/mac-bridge/ssh/authorized_keys.example
+  apps/mac-bridge/ssh/README.md
+  crates/omablue-helper/config.example.json
+  crates/omablue-helper/src/lib.rs
+  crates/omablue-helper/src/main.rs
+  crates/omablue-helper/src/session.rs
+  crates/omablue-helper/src/state.rs
+  crates/omablue-helper/src/watch.rs
+  plugin/Service.qml
+  plugin/README.md
+  scripts/build-helper.sh
   Cargo.toml
   crates/bridge-protocol/Cargo.toml
   protocol/v1.md
@@ -40,6 +57,11 @@ required_files=(
   protocol/fixtures/v1/sync-response.json
   protocol/fixtures/v1/message-event.json
   docs/findings/2026-08-17-watch-recovery.md
+  docs/findings/2026-08-17-unix-socket-boundary.md
+  docs/findings/2026-08-17-ssh-transport.md
+  docs/findings/2026-08-17-helper-state.md
+  docs/findings/2026-08-17-local-helper.md
+  docs/findings/2026-08-17-physical-status.md
 )
 
 for file in "${required_files[@]}"; do

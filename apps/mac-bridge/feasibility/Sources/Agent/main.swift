@@ -18,6 +18,9 @@ private struct ProbeStatus: Codable {
 }
 
 private let iso8601 = ISO8601DateFormatter()
+private let bridgeSocketPath = FileManager.default.homeDirectoryForCurrentUser
+    .appendingPathComponent("Library/Application Support/OmaBlue/bridge.sock")
+    .path
 
 private func databaseProbe() -> (Bool, String?, Int?) {
     let url = FileManager.default.homeDirectoryForCurrentUser
@@ -140,6 +143,18 @@ private func runProbe() {
             Data("probe write failed: \(nsError.domain) \(nsError.code)\n".utf8)
         )
     }
+}
+
+let bridgeServer: BridgeSocketServer
+do {
+    let adapterURL = Bundle.main.bundleURL
+        .appendingPathComponent("Contents/MacOS/OmaBlueIMsgAdapter")
+    let server = try BridgeSocketServer(socketPath: bridgeSocketPath, adapterURL: adapterURL)
+    try server.start()
+    bridgeServer = server
+} catch {
+    FileHandle.standardError.write(Data("bridge startup failed: \(error)\n".utf8))
+    exit(78)
 }
 
 while true {

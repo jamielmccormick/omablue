@@ -28,6 +28,7 @@ private func runRequest(_ request: AdapterRequest) throws -> [String: Any] {
 
     case let .sync(requestID, cursor, limit):
         let sinceRowID = try cursor.map { try validateCursor($0, source: source) } ?? 0
+        let contactNames = ContactDirectory().namesByHandle()
         let responses = try rpc.call([
             rpcRequest(id: "chats", method: "chats.list", params: ["limit": 100]),
             rpcRequest(
@@ -49,7 +50,8 @@ private func runRequest(_ request: AdapterRequest) throws -> [String: Any] {
             requestID: requestID,
             source: source,
             chatsResult: chats,
-            messagesResult: messages
+            messagesResult: messages,
+            contactNames: contactNames
         )
     case .watch:
         throw AdapterFailure(code: "watch_requires_stream", retryable: false)
@@ -72,11 +74,27 @@ private func runWatch(_ request: AdapterRequest) throws {
     try bridge.run()
 }
 
-do {
-    guard let input = try FileHandle.standardInput.read(upToCount: 65_537), !input.isEmpty else {
-        throw AdapterFailure(code: "invalid_request", retryable: false)
+private func readRequest() throws -> Data {
+    var data = Data()
+    while data.count <= 65_536 {
+        guard let chunk = try FileHandle.standardInput.read(upToCount: 16_384), !chunk.isEmpty else {
+            throw AdapterFailure(code: "invalid_request", retryable: false)
+        }
+        if let newline = chunk.firstIndex(of: 0x0A) {
+            data.append(contentsOf: chunk[..<newline])
+            let trailing = chunk[chunk.index(after: newline)...]
+            guard trailing.allSatisfy({ $0 == 0x20 || $0 == 0x09 || $0 == 0x0D }) else {
+                throw AdapterFailure(code: "invalid_request", retryable: false)
+            }
+            return data
+        }
+        data.append(contentsOf: chunk)
     }
-    let request = try parseRequest(input)
+    throw AdapterFailure(code: "request_too_large", retryable: false)
+}
+
+do {
+    let request = try parseRequest(readRequest())
     if case .watch = request {
         try runWatch(request)
     } else {
