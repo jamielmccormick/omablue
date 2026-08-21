@@ -37,6 +37,7 @@ Item {
     property bool statusRequestPending: false
     property bool watchActive: false
     property bool panelOpen: false
+    property string visibleConversationId: ""
     property double lastNotificationAt: 0
 
     readonly property int notificationCooldownSeconds: {
@@ -85,9 +86,14 @@ Item {
         })
         events = Array.isArray(frame.events) ? events.concat(frame.events) : events
 
-        if (wasLive && incomingMessages.length > 0) {
-            newMessagePending = true
-            notifyNewMessages(incomingMessages.length, incomingMessages, incomingConversations)
+        if (wasLive) {
+            // Only unread incoming messages are news; batches can contain
+            // outgoing rows and messages already read on another device.
+            var fresh = incomingMessages.filter(isUnreadIncoming)
+            if (fresh.length > 0) {
+                newMessagePending = true
+                notifyNewMessages(fresh.length, fresh, incomingConversations)
+            }
         }
     }
 
@@ -134,6 +140,21 @@ Item {
 
     function clearNewMessagePending() {
         newMessagePending = false
+    }
+
+    function isUnreadIncoming(message) {
+        if (!message) return false
+        if (String(message.direction || "") !== "incoming") return false
+        // A message that was already read on another device must never
+        // notify; only rows that are still unread count as news.
+        var readAt = message.read_at
+        return !(typeof readAt === "string" && readAt !== "")
+    }
+
+    function shouldNotifyFor(message) {
+        if (!isUnreadIncoming(message)) return false
+        if (panelOpen && String(visibleConversationId) === String(message.conversation_id)) return false
+        return true
     }
 
     function requestId(prefix) {
@@ -212,6 +233,7 @@ Item {
         if (kind === "message_upsert" && frame.message) {
             var message = frame.message
             var incomingConversations = frame.conversation ? [frame.conversation] : []
+            var unreadIncoming = isUnreadIncoming(message)
             messages = mergeRecords(messages, [message], "id").sort(function(a, b) {
                 return Number(a.source_rowid || 0) - Number(b.source_rowid || 0)
             })
@@ -223,7 +245,7 @@ Item {
                 for (var i = 0; i < conversations.length; i++) {
                     if (String(conversations[i].id) === String(message.conversation_id)) {
                         var bumped = Object.assign({}, conversations[i])
-                        if (String(message.direction) === "incoming" && !panelOpen)
+                        if (unreadIncoming && !panelOpen)
                             bumped.unread_count = Number(bumped.unread_count || 0) + 1
                         bumped.last_message_at = message.sent_at || bumped.last_message_at
                         conversations[i] = bumped
@@ -231,7 +253,7 @@ Item {
                     }
                 }
             }
-            if (String(message.direction) === "incoming") {
+            if (shouldNotifyFor(message)) {
                 newMessagePending = true
                 notifyNewMessages(1, [message], incomingConversations)
             }

@@ -64,6 +64,7 @@ Panel {
     function openConversation(conversation) {
         if (!conversation) return
         selectedConversationId = String(conversation.id)
+        if (engine) engine.visibleConversationId = String(conversation.id)
         selectedIndex = 0
         view = "thread"
         if (engine) {
@@ -85,6 +86,7 @@ Panel {
         if (view === "thread") {
             view = "inbox"
             selectedConversationId = ""
+            if (engine) engine.visibleConversationId = ""
             selectedIndex = 0
             Qt.callLater(function() { keyCatcher.forceActiveFocus() })
         } else {
