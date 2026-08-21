@@ -1,7 +1,7 @@
 # OmaBlue Bridge
 
-Planned native macOS setup application and per-user signed agent.
+Native macOS setup application and per-user signed agent.
 
-Implementation begins only after the TCC identity feasibility harness and test
-matrix are specified. The agent will run as the logged-in user, keep SIP
-enabled, supervise the `imsg` adapter, and expose only a private Unix socket.
+The agent runs as the logged-in user, keeps SIP enabled, supervises the
+`imsg` adapter, and exposes only a private Unix socket. See
+[macos/](macos/) for the build and the permission test matrix.

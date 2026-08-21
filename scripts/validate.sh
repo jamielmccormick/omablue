@@ -17,8 +17,8 @@ required_files=(
   docs/plans/2026-08-16-macos-tcc-feasibility-plan.md
   docs/threat-model.md
   plugin/manifest.json
-  apps/mac-bridge/feasibility/build.sh
-  apps/mac-bridge/feasibility/fetch-imsg.sh
+  apps/mac-bridge/macos/build.sh
+  apps/mac-bridge/macos/fetch-imsg.sh
   apps/mac-bridge/adapter/Sources/AdapterCore.swift
   apps/mac-bridge/adapter/Sources/IMsgRPC.swift
   apps/mac-bridge/adapter/Sources/PersistentIMsgRPC.swift
@@ -83,10 +83,10 @@ jq empty \
 
 if command -v xmllint >/dev/null 2>&1; then
   xmllint --noout \
-    "$repo_root/apps/mac-bridge/feasibility/Resources/Info.plist" \
-    "$repo_root/apps/mac-bridge/feasibility/Resources/com.jamielmccormick.omablue.feasibility-agent.plist" \
-    "$repo_root/apps/mac-bridge/feasibility/Resources/Controller.entitlements" \
-    "$repo_root/apps/mac-bridge/feasibility/Resources/Agent.entitlements"
+    "$repo_root/apps/mac-bridge/macos/Resources/Info.plist" \
+    "$repo_root/apps/mac-bridge/macos/Resources/com.jamielmccormick.omablue.agent.plist" \
+    "$repo_root/apps/mac-bridge/macos/Resources/Controller.entitlements" \
+    "$repo_root/apps/mac-bridge/macos/Resources/Agent.entitlements"
 fi
 
 printf 'OmaBlue repository validation passed.\n'

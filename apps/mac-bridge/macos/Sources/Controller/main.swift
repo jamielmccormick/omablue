@@ -3,7 +3,7 @@ import Foundation
 import Contacts
 import ServiceManagement
 
-private let agentPlist = "com.jamielmccormick.omablue.feasibility-agent.plist"
+private let agentPlist = "com.jamielmccormick.omablue.agent.plist"
 private let service = SMAppService.agent(plistName: agentPlist)
 
 private func statusName(_ status: SMAppService.Status) -> String {
@@ -81,7 +81,7 @@ do {
         printStatus()
     default:
         FileHandle.standardError.write(
-            Data("usage: OmaBlueFeasibility [register|unregister|status|open-settings]\n".utf8)
+            Data("usage: OmaBlueController [register|unregister|status|open-settings]\n".utf8)
         )
         exit(64)
     }

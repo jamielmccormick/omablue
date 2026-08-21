@@ -1,12 +1,17 @@
-# OmaBlue macOS Feasibility Harness
+# OmaBlue macOS App
 
-This harness tests the macOS permission and lifecycle boundary without reading
-messages or sending anything.
+The signed macOS side of OmaBlue: a controller, a per-user background agent,
+the `imsg` adapter boundary, and the restricted stdio bridge used by the
+forced-command SSH transport.
 
 It builds an application bundle containing:
 
-- `OmaBlueFeasibility`: controller for `SMAppService` registration and status
-- `OmaBlueFeasibilityAgent`: per-user agent that performs content-free probes
+- `OmaBlueController`: registration and permission helpers
+- `OmaBlueAgent`: per-user agent supervising the `imsg` adapter over a
+  private Unix socket
+- `OmaBlueIMsgAdapter`: converts pinned `imsg` JSON-RPC output into the
+  versioned OmaBlue protocol
+- `OmaBlueBridgeStdio`: forced-command entry point for the Linux helper
 
 ## Safety
 
@@ -18,7 +23,7 @@ message.
 Only redacted status fields are written to:
 
 ```text
-~/Library/Application Support/OmaBlue/feasibility-status.json
+~/Library/Application Support/OmaBlue/agent-status.json
 ```
 
 ## Build
@@ -57,7 +62,7 @@ the agent so subsequent runs use a stable path and code identity.
 ## Commands
 
 ```sh
-APP="/Applications/OmaBlue Feasibility.app/Contents/MacOS/OmaBlueFeasibility"
+APP="/Applications/OmaBlue.app/Contents/MacOS/OmaBlueController"
 "$APP" status
 "$APP" register
 "$APP" open-settings

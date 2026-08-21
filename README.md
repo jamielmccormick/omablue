@@ -3,8 +3,8 @@
 OmaBlue is a secure, open-source Messages bridge for Omarchy, powered by a
 user-owned Mac.
 
-The project is in its architecture and feasibility phase. It is not ready to
-install or use with personal messages.
+The project is in active development. It is not yet ready to install or use
+with personal messages, and a public alpha has not shipped.
 
 ## Principles
 
@@ -42,11 +42,14 @@ require disabling SIP or injecting into Messages are intentionally excluded.
 
 ## Status
 
-The first engineering milestone is an active macOS feasibility spike covering
-Full Disk Access identity, Messages Automation, login lifecycle, sleep/wake
-recovery, and safe send observation. See the
-[test plan](docs/plans/2026-08-16-macos-tcc-feasibility-plan.md) and
-[content-free probe harness](apps/mac-bridge/feasibility/).
+A working read-only vertical slice runs end to end: a signed macOS agent with
+Full Disk Access and Messages Automation supervises a pinned `imsg` release,
+the restricted SSH transport streams versioned sync frames to a Rust helper,
+and an Omarchy bar plugin renders conversations, unread counts, and contact
+names. Live watch updates, safe sending, and attachment previews are in
+progress. See the
+[TCC test plan](docs/plans/2026-08-16-macos-tcc-feasibility-plan.md) and the
+[macOS app](apps/mac-bridge/macos/).
 
 ## License
 

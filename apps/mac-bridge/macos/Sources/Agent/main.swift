@@ -106,7 +106,7 @@ private func statusURL() throws -> URL {
         withIntermediateDirectories: true,
         attributes: [.posixPermissions: 0o700]
     )
-    return directory.appendingPathComponent("feasibility-status.json")
+    return directory.appendingPathComponent("agent-status.json")
 }
 
 private func runProbe() {

@@ -3,9 +3,9 @@
 <plist version="1.0">
 <dict>
     <key>Label</key>
-    <string>com.jamielmccormick.omablue.feasibility-agent</string>
+    <string>com.jamielmccormick.omablue.agent</string>
     <key>BundleProgram</key>
-    <string>Contents/MacOS/OmaBlueFeasibilityAgent</string>
+    <string>Contents/MacOS/OmaBlueAgent</string>
     <key>RunAtLoad</key>
     <true/>
     <key>KeepAlive</key>

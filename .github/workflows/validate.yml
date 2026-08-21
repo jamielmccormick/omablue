@@ -27,21 +27,21 @@ jobs:
       - name: Lint protocol
         run: cargo clippy --workspace --all-targets -- -D warnings
 
-  macos-feasibility-harness:
+  macos-build:
     runs-on: macos-15
     steps:
       - name: Check out source
         uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
 
-      - name: Build ad-hoc signed feasibility app
-        run: OMABLUE_INCLUDE_IMSG=1 ./apps/mac-bridge/feasibility/build.sh
+      - name: Build ad-hoc signed app
+        run: OMABLUE_INCLUDE_IMSG=1 ./apps/mac-bridge/macos/build.sh
 
       - name: Inspect bundle signatures and entitlements
         run: |
-          app="apps/mac-bridge/feasibility/dist/OmaBlue Feasibility.app"
+          app="apps/mac-bridge/macos/dist/OmaBlue.app"
           codesign --verify --deep --strict --verbose=2 "$app"
-          codesign --display --entitlements :- "$app/Contents/MacOS/OmaBlueFeasibilityAgent"
+          codesign --display --entitlements :- "$app/Contents/MacOS/OmaBlueAgent"
           codesign --display --entitlements :- "$app/Contents/MacOS/OmaBlueIMsgAdapter"
           codesign --display --entitlements :- "$app/Contents/MacOS/OmaBlueBridgeStdio"
           plutil -lint "$app/Contents/Info.plist"
-          plutil -lint "$app/Contents/Library/LaunchAgents/com.jamielmccormick.omablue.feasibility-agent.plist"
+          plutil -lint "$app/Contents/Library/LaunchAgents/com.jamielmccormick.omablue.agent.plist"

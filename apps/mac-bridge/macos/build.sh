@@ -4,7 +4,7 @@ set -euo pipefail
 root="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 build_dir="$root/.build"
 dist_dir="$root/dist"
-app="$build_dir/OmaBlue Feasibility.app"
+app="$build_dir/OmaBlue.app"
 contents="$app/Contents"
 identity="${OMABLUE_CODESIGN_IDENTITY:--}"
 include_imsg="${OMABLUE_INCLUDE_IMSG:-0}"
@@ -26,7 +26,7 @@ xcrun --sdk macosx swiftc \
   -framework Contacts \
   -framework ServiceManagement \
   "$root/Sources/Controller/main.swift" \
-  -o "$contents/MacOS/OmaBlueFeasibility"
+  -o "$contents/MacOS/OmaBlueController"
 
 xcrun --sdk macosx swiftc \
   -framework AppKit \
@@ -36,7 +36,7 @@ xcrun --sdk macosx swiftc \
   "$root/../ipc/CodeIdentity.swift" \
   "$root/../ipc/BridgeSocketServer.swift" \
   "$root/Sources/Agent/main.swift" \
-  -o "$contents/MacOS/OmaBlueFeasibilityAgent"
+  -o "$contents/MacOS/OmaBlueAgent"
 
 xcrun --sdk macosx swiftc \
   -framework Foundation \
@@ -107,7 +107,7 @@ xcrun --sdk macosx swiftc \
 
 cp "$root/Resources/Info.plist" "$contents/Info.plist"
 cp \
-  "$root/Resources/com.jamielmccormick.omablue.feasibility-agent.plist" \
+  "$root/Resources/com.jamielmccormick.omablue.agent.plist" \
   "$contents/Library/LaunchAgents/"
 
 plutil -replace CFBundleVersion -string "$build_number" "$contents/Info.plist"
@@ -122,7 +122,7 @@ if [[ $include_imsg == "1" ]]; then
 fi
 
 plutil -lint "$contents/Info.plist"
-plutil -lint "$contents/Library/LaunchAgents/com.jamielmccormick.omablue.feasibility-agent.plist"
+plutil -lint "$contents/Library/LaunchAgents/com.jamielmccormick.omablue.agent.plist"
 
 sign_args=(--force --sign "$identity" --options runtime)
 bundle_identifier="$(plutil -extract CFBundleIdentifier raw "$contents/Info.plist")"
@@ -133,7 +133,7 @@ fi
 
 codesign "${sign_args[@]}" \
   --entitlements "$root/Resources/Agent.entitlements" \
-  "$contents/MacOS/OmaBlueFeasibilityAgent"
+  "$contents/MacOS/OmaBlueAgent"
 codesign "${sign_args[@]}" \
   --entitlements "$root/Resources/Controller.entitlements" \
   "$contents/MacOS/OmaBlueIMsgAdapter"
@@ -147,6 +147,6 @@ codesign "${sign_args[@]}" \
 codesign --verify --deep --strict --verbose=2 "$app"
 
 mkdir -p "$dist_dir"
-rm -rf -- "$dist_dir/OmaBlue Feasibility.app"
-mv -- "$app" "$dist_dir/OmaBlue Feasibility.app"
-printf 'Built %s\n' "$dist_dir/OmaBlue Feasibility.app"
+rm -rf -- "$dist_dir/OmaBlue.app"
+mv -- "$app" "$dist_dir/OmaBlue.app"
+printf 'Built %s\n' "$dist_dir/OmaBlue.app"
