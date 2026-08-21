@@ -67,7 +67,10 @@ Panel {
         selectedIndex = 0
         view = "thread"
         if (engine) engine.clearNewMessagePending()
-        Qt.callLater(function() { threadScroller.forceActiveFocus() })
+        Qt.callLater(function() {
+            threadScroller.contentY = 0
+            threadScroller.forceActiveFocus()
+        })
     }
 
     function goBack() {
@@ -75,6 +78,7 @@ Panel {
             view = "inbox"
             selectedConversationId = ""
             selectedIndex = 0
+            Qt.callLater(function() { keyCatcher.forceActiveFocus() })
         } else {
             close()
         }
@@ -100,6 +104,26 @@ Panel {
         if (engine) engine.clearNewMessagePending()
         selectedIndex = 0
         Qt.callLater(function() { keyCatcher.forceActiveFocus() })
+    }
+
+    Component {
+        id: bubbleIconComponent
+        Text {
+            text: "󰍸"
+            color: root.engine && root.engine.offline ? root.dim : Color.accent
+            font.family: root.fontFamily
+            font.pixelSize: Style.font.display
+        }
+    }
+
+    Component {
+        id: backIconComponent
+        Text {
+            text: ""
+            color: Color.accent
+            font.family: root.fontFamily
+            font.pixelSize: Style.font.display
+        }
     }
 
     KeyboardPanel {
@@ -136,14 +160,7 @@ Panel {
                     : ""
                 foreground: root.foreground
                 fontFamily: root.fontFamily
-                iconComponent: Component {
-                    Text {
-                        text: "󰍸"
-                        color: root.engine && root.engine.offline ? root.dim : Color.accent
-                        font.family: root.fontFamily
-                        font.pixelSize: Style.font.display
-                    }
-                }
+                iconComponent: root.view === "thread" ? backIconComponent : bubbleIconComponent
             }
 
             Row {
@@ -356,14 +373,42 @@ Panel {
                 width: parent.width
                 implicitHeight: threadColumn.implicitHeight
 
-                Text {
-                    text: "‹  Back to conversations"
-                    color: Color.accent
-                    font.family: root.fontFamily
-                    font.pixelSize: Style.font.bodySmall
+                Rectangle {
+                    id: backButton
+                    width: parent.width
+                    height: Style.space(32)
+                    radius: Style.cornerRadius
+                    color: backArea.containsMouse ? Color.menu.selectedBackground : "transparent"
+                    border.width: 1
+                    border.color: Color.popups.border
+
+                    Row {
+                        anchors.left: parent.left
+                        anchors.leftMargin: Style.space(10)
+                        anchors.verticalCenter: parent.verticalCenter
+                        spacing: Style.space(6)
+
+                        Text {
+                            text: ""
+                            color: Color.accent
+                            font.family: root.fontFamily
+                            font.pixelSize: Style.font.body
+                            anchors.verticalCenter: parent.verticalCenter
+                        }
+
+                        Text {
+                            text: "Back to conversations"
+                            color: root.foreground
+                            font.family: root.fontFamily
+                            font.pixelSize: Style.font.bodySmall
+                            anchors.verticalCenter: parent.verticalCenter
+                        }
+                    }
 
                     MouseArea {
+                        id: backArea
                         anchors.fill: parent
+                        hoverEnabled: true
                         onClicked: root.goBack()
                     }
                 }
@@ -371,7 +416,7 @@ Panel {
                 Flickable {
                     id: threadScroller
                     anchors.top: parent.top
-                    anchors.topMargin: Style.space(30)
+                    anchors.topMargin: Style.space(42)
                     width: parent.width
                     height: Style.space(390)
                     clip: true

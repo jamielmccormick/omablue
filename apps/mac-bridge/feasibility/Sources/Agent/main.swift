@@ -145,17 +145,42 @@ private func runProbe() {
     }
 }
 
-let bridgeServer: BridgeSocketServer
-do {
-    let adapterURL = Bundle.main.bundleURL
-        .appendingPathComponent("Contents/MacOS/OmaBlueIMsgAdapter")
-    let server = try BridgeSocketServer(socketPath: bridgeSocketPath, adapterURL: adapterURL)
-    try server.start()
-    bridgeServer = server
-} catch {
-    FileHandle.standardError.write(Data("bridge startup failed: \(error)\n".utf8))
+private func recordStartupFailure(_ error: Error, attempt: Int) {
+    FileHandle.standardError.write(Data("bridge startup failed (attempt \(attempt)): \(error)\n".utf8))
+    let url = FileManager.default.homeDirectoryForCurrentUser
+        .appendingPathComponent("Library/Application Support/OmaBlue/startup-error.log")
+    let text = "\(ISO8601DateFormatter().string(from: Date())) attempt \(attempt): \(error)\n"
+    if let data = Data(text.utf8) as NSData? {
+        FileManager.default.createFile(atPath: url.path, contents: data as Data, attributes: [.posixPermissions: 0o600])
+    }
+}
+
+private func clearStartupFailure() {
+    let url = FileManager.default.homeDirectoryForCurrentUser
+        .appendingPathComponent("Library/Application Support/OmaBlue/startup-error.log")
+    try? FileManager.default.removeItem(at: url)
+}
+
+let adapterURL = Bundle.main.bundleURL
+    .appendingPathComponent("Contents/MacOS/OmaBlueIMsgAdapter")
+
+var loadedServer: BridgeSocketServer?
+for attempt in 1...3 {
+    do {
+        let candidate = try BridgeSocketServer(socketPath: bridgeSocketPath, adapterURL: adapterURL)
+        try candidate.start()
+        loadedServer = candidate
+        break
+    } catch {
+        recordStartupFailure(error, attempt: attempt)
+        if attempt < 3 { Thread.sleep(forTimeInterval: 8) }
+    }
+}
+
+guard let bridgeServer = loadedServer else {
     exit(78)
 }
+clearStartupFailure()
 
 while true {
     runProbe()

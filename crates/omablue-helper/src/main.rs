@@ -322,12 +322,15 @@ fn session_error_code(error: &SessionError) -> &str {
         SessionError::Transport(TransportError::Json(_)) => "ssh_json_error",
         SessionError::Transport(TransportError::InvalidFrame) => "ssh_invalid_frame",
         SessionError::Transport(TransportError::FrameTooLarge) => "ssh_frame_too_large",
+        SessionError::Transport(TransportError::RequestIdMismatch) => "request_id_mismatch",
         SessionError::RequestIdMismatch => "request_id_mismatch",
         SessionError::InvalidResponse => "invalid_remote_response",
         SessionError::State(_) => "state_error",
         SessionError::Watch(_) => "watch_error",
         SessionError::Json(_) => "json_error",
         SessionError::NoCursor => "cursor_missing",
+        SessionError::Transport(TransportError::Closed) => "transport_closed",
+        SessionError::Transport(TransportError::InvalidConfiguration(_)) => "invalid_configuration",
         SessionError::Transport(_) => "remote_unavailable",
     }
 }

@@ -93,8 +93,12 @@ private func readRequest() throws -> Data {
     throw AdapterFailure(code: "request_too_large", retryable: false)
 }
 
+let parsedRequest = try? parseRequest(readRequest())
+
 do {
-    let request = try parseRequest(readRequest())
+    guard let request = parsedRequest else {
+        throw AdapterFailure(code: "invalid_request", retryable: false)
+    }
     if case .watch = request {
         try runWatch(request)
     } else {
@@ -104,7 +108,7 @@ do {
     }
 } catch let failure as AdapterFailure {
     let data = try JSONSerialization.data(
-        withJSONObject: errorResponse(requestID: nil, failure: failure),
+        withJSONObject: errorResponse(requestID: parsedRequest?.requestID, failure: failure),
         options: [.sortedKeys]
     )
     try FileHandle.standardOutput.write(contentsOf: data + Data([0x0A]))
@@ -112,7 +116,7 @@ do {
 } catch {
     let failure = AdapterFailure(code: "internal_error", retryable: false)
     let data = try JSONSerialization.data(
-        withJSONObject: errorResponse(requestID: nil, failure: failure),
+        withJSONObject: errorResponse(requestID: parsedRequest?.requestID, failure: failure),
         options: [.sortedKeys]
     )
     try FileHandle.standardOutput.write(contentsOf: data + Data([0x0A]))

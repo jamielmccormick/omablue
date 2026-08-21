@@ -137,8 +137,6 @@ Item {
     function requestStatus() {
         if (statusRequestPending) return false
         statusRequestPending = true
-        errorText = ""
-        statusText = "Checking Mac bridge"
         var sent = send({
             command: "status",
             request_id: requestId("status"),
@@ -154,14 +152,16 @@ Item {
 
     function requestSync() {
         if (syncing || pendingSyncRequestId !== "") return false
-        syncing = true
-        statusText = "Syncing messages"
-        send({
+        var sent = send({
             command: "sync",
             request_id: requestId("sync"),
             protocol_version: 1,
             limit: 100
         })
+        if (!sent) return false
+        syncing = true
+        statusText = "Syncing messages"
+        return true
     }
 
     function resetCursor() {
@@ -188,9 +188,15 @@ Item {
             statusRequestTimeout.stop()
             statusRequestPending = false
             syncing = false
-            errorText = frame.code === "resync_required"
-                ? "Messages database changed; resync required"
-                : String(frame.code || "Helper request failed")
+            if (frame.code === "resync_required") {
+                // The Mac database generation changes whenever Messages writes
+                // to chat.db. Reset the cursor and recover instead of going
+                // permanently offline.
+                statusText = "Messages changed; resyncing"
+                resetCursor()
+                return
+            }
+            errorText = String(frame.code || "Helper request failed")
             statusText = errorText
             return
         }
@@ -219,16 +225,20 @@ Item {
         }
 
         if (frame.capabilities && frame.source) {
-            if (helperReady || syncing) return
             statusRequestTimeout.stop()
             statusRequestPending = false
             errorText = ""
-            helperReady = true
-            serverVersion = String(frame.server_version || "")
             source = frame.source
             capabilities = frame.capabilities
-            statusText = "Bridge ready"
-            requestSync()
+            if (!helperReady) {
+                helperReady = true
+                serverVersion = String(frame.server_version || "")
+                statusText = "Bridge ready"
+                requestSync()
+            } else {
+                statusText = "Ready"
+                if (!syncing && pendingSyncRequestId === "") requestSync()
+            }
             return
         }
 
@@ -266,9 +276,11 @@ Item {
         onRunningChanged: {
             if (running) {
                 launched = false
+                root.restartingHelper = false
                 return
             }
             if (launched) return
+            if (root.restartingHelper) return
             if (!root.enabled) return
             helperReady = false
             syncing = false
@@ -278,6 +290,7 @@ Item {
         onExited: function(code) {
             helperReady = false
             syncing = false
+            if (root.restartingHelper) return
             if (root.enabled) {
                 errorText = code === 0 ? "OmaBlue helper stopped" : "OmaBlue helper unavailable"
                 statusText = errorText
@@ -285,18 +298,58 @@ Item {
         }
     }
 
+    property bool restartingHelper: false
+
     Timer {
         id: startupRequest
-        interval: 500
+        interval: 2000
         repeat: true
-        running: !root.helperReady && !root.syncing
+        running: root.enabled && !root.helperReady && !root.syncing && root.pendingSyncRequestId === ""
         onTriggered: root.requestStatus()
     }
 
     Timer {
+        id: healthCheck
+        interval: 4000
+        repeat: true
+        running: root.enabled && root.helperReady && root.errorText !== "" && !root.syncing
+        onTriggered: root.requestStatus()
+    }
+
+    Timer {
+        id: syncPoll
+        interval: 20000
+        repeat: true
+        running: root.enabled && root.helperReady && root.errorText === ""
+            && !root.syncing && root.pendingSyncRequestId === ""
+        onTriggered: root.requestSync()
+    }
+
+    Timer {
+        id: restartHelper
+        interval: 3000
+        repeat: true
+        running: root.enabled && !backend.running
+        onTriggered: {
+            root.restartingHelper = true
+            backend.running = false
+            backend.running = true
+        }
+    }
+
+    onEnabledChanged: {
+        if (!enabled) {
+            backend.running = false
+        } else if (!backend.running) {
+            restartingHelper = true
+            backend.running = true
+        }
+    }
+
+    Timer {
         id: statusRequestTimeout
-        interval: 1500
+        interval: 8000
         repeat: false
-        onTriggered: if (!root.helperReady) root.statusRequestPending = false
+        onTriggered: root.statusRequestPending = false
     }
 }

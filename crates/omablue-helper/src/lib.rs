@@ -288,10 +288,13 @@ fn request_id(request: &Request) -> &str {
 
 fn validate_response(response: &Value, expected_request_id: &str) -> Result<(), TransportError> {
     let object = response.as_object().ok_or(TransportError::InvalidFrame)?;
-    if object.get("request_id").and_then(Value::as_str) != Some(expected_request_id) {
+    let is_error = object.get("type").and_then(Value::as_str) == Some("error");
+    if !is_error && object.get("request_id").and_then(Value::as_str) != Some(expected_request_id) {
+        // Error frames may carry a null request id when the adapter could not
+        // attribute the failure to a parsed request; data frames must match.
         return Err(TransportError::RequestIdMismatch);
     }
-    if object.get("type").and_then(Value::as_str) == Some("error") {
+    if is_error {
         let code = object
             .get("code")
             .and_then(Value::as_str)

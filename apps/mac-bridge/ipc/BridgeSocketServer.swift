@@ -1,6 +1,13 @@
 import Darwin
 import Foundation
 
+private let bridgeDebug = ProcessInfo.processInfo.environment["OMABLUE_BRIDGE_DEBUG"] == "1"
+
+private func debugLog(_ message: String) {
+    guard bridgeDebug else { return }
+    FileHandle.standardError.write(Data("[bridge] \(message)\n".utf8))
+}
+
 final class BridgeSocketServer: @unchecked Sendable {
     private let socketPath: String
     private let adapterURL: URL
@@ -8,7 +15,7 @@ final class BridgeSocketServer: @unchecked Sendable {
     private let stateLock = NSLock()
     private var listener: Int32 = -1
     private var lockFile: Int32 = -1
-    private var activeSession = false
+    private let sessionSlot = DispatchSemaphore(value: 1)
     private var stopped = false
 
     init(socketPath: String, adapterURL: URL) throws {
@@ -74,25 +81,36 @@ final class BridgeSocketServer: @unchecked Sendable {
 
             let client = Darwin.accept(descriptor, nil, nil)
             if client < 0 {
+                debugLog("accept failed errno=\(errno)")
                 if errno == EINTR { continue }
                 return
             }
             _ = fcntl(client, F_SETFD, FD_CLOEXEC)
 
             do {
-                guard try UnixSocket.peerUID(client) == geteuid(),
-                      try expectedIdentity.matchesPeer(client)
-                else {
+                guard try UnixSocket.peerUID(client) == geteuid() else {
                     throw BridgeSocketError.unauthorizedPeer
                 }
-                guard reserveSession() else {
-                    Darwin.close(client)
-                    continue
+                guard try expectedIdentity.matchesPeer(client) else {
+                    debugLog("peer identity mismatch")
+                    throw BridgeSocketError.unauthorizedPeer
                 }
             } catch {
+                debugLog("peer rejected: \(error)")
                 Darwin.close(client)
                 continue
             }
+
+            // Serialize sessions with a bounded wait instead of dropping
+            // concurrent clients, so a slow in-flight request never surfaces
+            // as a silent EOF on the helper side.
+            let waitResult = sessionSlot.wait(timeout: .now() + Self.slotWaitSeconds)
+            guard waitResult == .success else {
+                debugLog("session slot timeout; closing client")
+                Darwin.close(client)
+                continue
+            }
+            debugLog("accepted client fd=\(client)")
 
             DispatchQueue.global(qos: .userInitiated).async { [weak self] in
                 self?.serve(client)
@@ -100,20 +118,10 @@ final class BridgeSocketServer: @unchecked Sendable {
         }
     }
 
-    private func reserveSession() -> Bool {
-        stateLock.lock()
-        defer { stateLock.unlock() }
-        guard !activeSession else { return false }
-        activeSession = true
-        return true
-    }
-
     private func serve(_ client: Int32) {
         defer {
             Darwin.close(client)
-            stateLock.lock()
-            activeSession = false
-            stateLock.unlock()
+            sessionSlot.signal()
         }
 
         let process = Process()
@@ -127,17 +135,37 @@ final class BridgeSocketServer: @unchecked Sendable {
         do {
             try process.run()
         } catch {
+            debugLog("adapter spawn failed: \(error)")
             return
         }
+        debugLog("adapter spawned pid=\(process.processIdentifier)")
 
         let terminationLock = NSLock()
         var terminated = false
-        let terminate = {
+        let terminate = { [adapterPID = process.processIdentifier] in
             terminationLock.lock()
             if !terminated {
                 terminated = true
+                debugLog("terminate; adapter=\(adapterPID)")
                 if process.isRunning { process.terminate() }
                 Darwin.shutdown(client, SHUT_RDWR)
+            }
+            terminationLock.unlock()
+        }
+
+        // Hard cap so a wedged adapter can never pin activeSession forever.
+        DispatchQueue.global(qos: .utility).asyncAfter(
+            deadline: .now() + Self.maxSessionSeconds
+        ) {
+            terminate()
+        }
+        DispatchQueue.global(qos: .utility).asyncAfter(
+            deadline: .now() + Self.maxSessionSeconds + 5
+        ) {
+            terminationLock.lock()
+            if !terminated && process.isRunning {
+                debugLog("escalate to SIGKILL; adapter=\(process.processIdentifier)")
+                _ = Darwin.kill(process.processIdentifier, SIGKILL)
             }
             terminationLock.unlock()
         }
@@ -152,6 +180,7 @@ final class BridgeSocketServer: @unchecked Sendable {
             var gracefulInputClose = false
             do {
                 while let data = try UnixSocket.receive(client) {
+                    debugLog("input \(data.count)B")
                     if let marker = data.firstIndex(of: 0x04) {
                         guard marker == data.index(before: data.endIndex) else {
                             throw BridgeSocketError.unauthorizedPeer
@@ -165,7 +194,12 @@ final class BridgeSocketServer: @unchecked Sendable {
                     }
                     try input.fileHandleForWriting.write(contentsOf: data)
                 }
-            } catch {}
+                if !gracefulInputClose {
+                    debugLog("input EOF without EOT")
+                }
+            } catch {
+                debugLog("input error: \(error)")
+            }
             if !gracefulInputClose {
                 terminate()
             }
@@ -176,16 +210,24 @@ final class BridgeSocketServer: @unchecked Sendable {
             defer { pumps.leave() }
             do {
                 while let data = try output.fileHandleForReading.read(upToCount: 16_384), !data.isEmpty {
+                    debugLog("output \(data.count)B")
                     try UnixSocket.sendAll(client, data: data)
                 }
-            } catch {}
+                debugLog("output EOF")
+            } catch {
+                debugLog("output error: \(error)")
+            }
             terminate()
         }
 
         pumps.wait()
         terminate()
         process.waitUntilExit()
+        debugLog("session ended; adapter exit=\(process.terminationStatus)")
     }
+
+    private static let maxSessionSeconds: TimeInterval = 180
+    private static let slotWaitSeconds: DispatchTimeInterval = .seconds(30)
 
     private func prepareDirectory() throws {
         let directory = URL(fileURLWithPath: socketPath).deletingLastPathComponent().path
