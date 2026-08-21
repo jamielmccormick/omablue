@@ -3,6 +3,8 @@ use std::fs;
 use std::io::{self, BufRead, BufReader, BufWriter, Write};
 use std::os::unix::fs::PermissionsExt;
 use std::path::PathBuf;
+use std::thread;
+use std::time::Duration;
 
 use omablue_helper::{
     CursorStore, ReadOnlySession, SessionError, SshTransportConfig, TransportError, WatchItem,
@@ -249,54 +251,81 @@ fn run(announce_status: bool) -> Result<(), ()> {
                 )?;
             }
             LocalCommand::Watch { request_id, .. } => {
-                let mut watch = match session.begin_watch() {
-                    Ok(watch) => watch,
-                    Err(error) => {
+                // Keep the helper alive across watch-stream restarts: the Mac
+                // closes streams after idle periods, so retry internally with
+                // backoff instead of exiting and forcing a full reconnect.
+                let mut announced = false;
+                let mut consecutive_failures = 0u32;
+                'watch: loop {
+                    let mut watch = match session.begin_watch() {
+                        Ok(watch) => {
+                            consecutive_failures = 0;
+                            watch
+                        }
+                        Err(SessionError::NoCursor) => {
+                            // Yield to the main loop so a sync can establish
+                            // the cursor first.
+                            write_frame(
+                                &mut output,
+                                &error_response(Some(&request_id), "cursor_missing"),
+                            )?;
+                            break 'watch;
+                        }
+                        Err(error) => {
+                            consecutive_failures += 1;
+                            if consecutive_failures > 5 {
+                                write_frame(
+                                    &mut output,
+                                    &error_response(Some(&request_id), session_error_code(&error)),
+                                )?;
+                                break 'watch;
+                            }
+                            thread::sleep(Duration::from_secs(5));
+                            continue 'watch;
+                        }
+                    };
+                    if !announced {
                         write_frame(
                             &mut output,
-                            &error_response(Some(&request_id), session_error_code(&error)),
+                            &json!({
+                                "type": "watch_started",
+                                "request_id": request_id,
+                                "protocol_version": PROTOCOL_VERSION,
+                            }),
                         )?;
-                        continue;
+                        announced = true;
                     }
-                };
-                write_frame(
-                    &mut output,
-                    &json!({
-                        "type": "watch_started",
-                        "request_id": request_id,
-                        "protocol_version": PROTOCOL_VERSION,
-                    }),
-                )?;
-                loop {
-                    match watch.next_item() {
-                        Ok(WatchItem::Event(event)) => {
-                            let value = match serde_json::to_value(&event) {
-                                Ok(value) => value,
-                                Err(_) => break,
-                            };
-                            // Write before committing so a crash between the
-                            // two replays the event; the plugin merges by id.
-                            if write_frame(&mut output, &value).is_err() {
-                                return Ok(());
+                    loop {
+                        match watch.next_item() {
+                            Ok(WatchItem::Event(event)) => {
+                                let value = match serde_json::to_value(&event) {
+                                    Ok(value) => value,
+                                    Err(_) => break,
+                                };
+                                // Write before committing so a crash between
+                                // the two replays the event; the plugin merges
+                                // by id.
+                                if write_frame(&mut output, &value).is_err() {
+                                    return Ok(());
+                                }
+                                if watch.commit_event(&event).is_err() {
+                                    break;
+                                }
                             }
-                            if watch.commit_event(&event).is_err() {
-                                break;
+                            Ok(WatchItem::Duplicate) => {}
+                            Ok(WatchItem::ResyncRequired(event)) => {
+                                if let Ok(value) = serde_json::to_value(&event) {
+                                    let _ = write_frame(&mut output, &value);
+                                }
+                                // Generation changed: yield so reset and sync
+                                // commands can be processed.
+                                break 'watch;
                             }
+                            Err(_) => break,
                         }
-                        Ok(WatchItem::Duplicate) => {}
-                        Ok(WatchItem::ResyncRequired(event)) => {
-                            if let Ok(value) = serde_json::to_value(&event) {
-                                let _ = write_frame(&mut output, &value);
-                            }
-                            break;
-                        }
-                        Err(_) => break,
                     }
+                    thread::sleep(Duration::from_secs(5));
                 }
-                // The stream ended (Mac restart, generation change, network
-                // drop). Exit cleanly so the plugin reconnects from its
-                // persisted cursor.
-                return Ok(());
             }
         }
     }

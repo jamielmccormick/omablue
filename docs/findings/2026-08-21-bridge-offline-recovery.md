@@ -70,9 +70,32 @@ this commit.
 - SMAppService registration of the launch agent proved flaky after repeated
   ad-hoc bundle replacements (`spawn failed`, exit 78 loops). The agent is
   now registered as a classic user LaunchAgent at
-  `~/Library/LaunchAgents/com.jamielmccormick.omablue.feasibility-agent.plist`
-  with identical KeepAlive behavior. TCC grants follow the code identity,
-  not the launcher.
+  `~/Library/LaunchAgents/com.jamielmccormick.omablue.agent.plist` with
+  identical KeepAlive behavior. TCC grants follow the code identity, not the
+  launcher.
 - Each ad-hoc re-signed replacement invalidates Full Disk Access and
   Contacts grants once; Developer ID signing will remove this churn before
   public alpha.
+
+## Watch Keep-Alive
+
+The Mac closes idle watch streams after roughly 30 seconds. The helper's
+watch command now retries `begin_watch` internally with a 5-second backoff
+instead of exiting, so one helper process survives stream restarts. It
+yields back to the main loop when the cursor is missing (so a sync can
+establish it) or after five consecutive connection failures.
+
+## Lifecycle Test Results (2026-08-21)
+
+| Case | Result |
+|---|---|
+| Agent process kill | Pass — launchd relaunched within 3 s; plugin reconnected quietly |
+| Omarchy shell restart | Pass — cursor persisted, catch-up did not duplicate notifications |
+| Messages quit | Pass — sync unaffected (reads are database-only); automation probe degrades content-free |
+| Sleep | Partial — the test Mac DarkWakes within seconds due to internal SMC events, so recovery was exercised through equivalent disconnections instead |
+| Reboot and login | Pass — LaunchAgent bootstraps at login; a transient `resync_required` while WAL settles and a possible first-probe timeout both self-heal |
+
+Testing note: manual probes must not run alongside the live plugin without
+pausing it first. The bridge serves one session at a time by design, and a
+persistent watch holds that session, so a second client waits for the slot
+and times out with a generic transport error if the watch never yields.
