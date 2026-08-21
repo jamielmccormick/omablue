@@ -35,6 +35,14 @@ Item {
     property int requestSequence: 0
     property bool newMessagePending: false
     property bool statusRequestPending: false
+    property bool watchActive: false
+    property bool panelOpen: false
+    property double lastNotificationAt: 0
+
+    readonly property int notificationCooldownSeconds: {
+        var value = settings && settings.notificationCooldownSeconds
+        return Number.isFinite(Number(value)) ? Number(value) : 0
+    }
 
     readonly property int unreadCount: {
         var count = 0
@@ -99,6 +107,11 @@ Item {
 
     function notifyNewMessages(count, incomingMessages, incomingConversations) {
         if (settings && settings.notificationsEnabled === false) return
+        var now = Date.now()
+        if (notificationCooldownSeconds > 0
+            && lastNotificationAt > 0
+            && now - lastNotificationAt < notificationCooldownSeconds * 1000) return
+        lastNotificationAt = now
         var labels = []
         for (var i = 0; i < incomingMessages.length; i++) {
             var label = conversationLabel(incomingMessages[i].conversation_id, incomingConversations)
@@ -172,6 +185,67 @@ Item {
         })
     }
 
+    function startWatchIfPossible() {
+        if (!helperReady || watchActive || syncing || pendingSyncRequestId !== "") return
+        if (!capabilities || capabilities.watch_messages !== true) return
+        send({
+            command: "watch",
+            request_id: requestId("watch"),
+            protocol_version: 1
+        })
+    }
+
+    function handleEvent(frame) {
+        var kind = String(frame.event_type || "")
+        if (kind === "resync_required") {
+            watchActive = false
+            statusText = "Messages changed; resyncing"
+            resetCursor()
+            return
+        }
+        if (kind === "conversation_upsert" && frame.conversation) {
+            conversations = mergeRecords(conversations, [frame.conversation], "id").sort(function(a, b) {
+                return String(b.last_message_at || "").localeCompare(String(a.last_message_at || ""))
+            })
+            return
+        }
+        if (kind === "message_upsert" && frame.message) {
+            var message = frame.message
+            var incomingConversations = frame.conversation ? [frame.conversation] : []
+            messages = mergeRecords(messages, [message], "id").sort(function(a, b) {
+                return Number(a.source_rowid || 0) - Number(b.source_rowid || 0)
+            })
+            if (frame.conversation) {
+                conversations = mergeRecords(conversations, [frame.conversation], "id").sort(function(a, b) {
+                    return String(b.last_message_at || "").localeCompare(String(a.last_message_at || ""))
+                })
+            } else {
+                for (var i = 0; i < conversations.length; i++) {
+                    if (String(conversations[i].id) === String(message.conversation_id)) {
+                        var bumped = Object.assign({}, conversations[i])
+                        if (String(message.direction) === "incoming" && !panelOpen)
+                            bumped.unread_count = Number(bumped.unread_count || 0) + 1
+                        bumped.last_message_at = message.sent_at || bumped.last_message_at
+                        conversations[i] = bumped
+                        break
+                    }
+                }
+            }
+            if (String(message.direction) === "incoming") {
+                newMessagePending = true
+                notifyNewMessages(1, [message], incomingConversations)
+            }
+            return
+        }
+        if (kind === "message_deleted" && frame.message_id) {
+            messages = messages.filter(function(message) {
+                return String(message.id) !== String(frame.message_id)
+            })
+        }
+        // reaction_changed is ignored for now; reactions refresh on the next
+        // sync batch.
+    }
+
     function handleFrame(line) {
         var frame
         try {
@@ -196,8 +270,24 @@ Item {
                 resetCursor()
                 return
             }
+            if (frame.code === "cursor_missing") {
+                // Watch was requested before the first sync committed a
+                // cursor; polling covers us until then.
+                return
+            }
             errorText = String(frame.code || "Helper request failed")
             statusText = errorText
+            return
+        }
+
+        if (frame.type === "watch_started") {
+            watchActive = true
+            statusText = "Live"
+            return
+        }
+
+        if (frame.event_type) {
+            handleEvent(frame)
             return
         }
 
@@ -219,7 +309,8 @@ Item {
             if (syncHasMore) {
                 requestSync()
             } else {
-                statusText = "Ready"
+                statusText = watchActive ? "Live" : "Ready"
+                startWatchIfPossible()
             }
             return
         }
@@ -235,6 +326,8 @@ Item {
                 serverVersion = String(frame.server_version || "")
                 statusText = "Bridge ready"
                 requestSync()
+            } else if (watchActive) {
+                statusText = "Live"
             } else {
                 statusText = "Ready"
                 if (!syncing && pendingSyncRequestId === "") requestSync()
@@ -288,13 +381,19 @@ Item {
             statusText = errorText
         }
         onExited: function(code) {
+            var wasWatching = root.watchActive
+            root.watchActive = false
             helperReady = false
             syncing = false
             if (root.restartingHelper) return
-            if (root.enabled) {
-                errorText = code === 0 ? "OmaBlue helper stopped" : "OmaBlue helper unavailable"
-                statusText = errorText
+            if (!root.enabled) return
+            if (code === 0 && wasWatching) {
+                // Clean watch-stream end; reconnect quietly from the cursor.
+                statusText = "Reconnecting"
+                return
             }
+            errorText = code === 0 ? "OmaBlue helper stopped" : "OmaBlue helper unavailable"
+            statusText = errorText
         }
     }
 
@@ -321,7 +420,7 @@ Item {
         interval: 20000
         repeat: true
         running: root.enabled && root.helperReady && root.errorText === ""
-            && !root.syncing && root.pendingSyncRequestId === ""
+            && !root.syncing && root.pendingSyncRequestId === "" && !root.watchActive
         onTriggered: root.requestSync()
     }
 

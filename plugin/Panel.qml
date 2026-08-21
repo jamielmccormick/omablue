@@ -66,6 +66,14 @@ Panel {
         selectedConversationId = String(conversation.id)
         selectedIndex = 0
         view = "thread"
+        if (engine) {
+            engine.conversations = engine.conversations.map(function(entry) {
+                if (String(entry.id) !== String(conversation.id)) return entry
+                var cleared = Object.assign({}, entry)
+                cleared.unread_count = 0
+                return cleared
+            })
+        }
         if (engine) engine.clearNewMessagePending()
         Qt.callLater(function() {
             threadScroller.contentY = 0
@@ -100,6 +108,7 @@ Panel {
     }
 
     onOpenedChanged: {
+        if (engine) engine.panelOpen = opened
         if (!opened) return
         if (engine) engine.clearNewMessagePending()
         selectedIndex = 0

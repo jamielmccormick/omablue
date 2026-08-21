@@ -5,7 +5,7 @@ use std::os::unix::fs::PermissionsExt;
 use std::path::PathBuf;
 
 use omablue_helper::{
-    CursorStore, ReadOnlySession, SessionError, SshTransportConfig, TransportError,
+    CursorStore, ReadOnlySession, SessionError, SshTransportConfig, TransportError, WatchItem,
 };
 use omablue_protocol::PROTOCOL_VERSION;
 use serde::Deserialize;
@@ -34,6 +34,10 @@ enum LocalCommand {
         request_id: String,
         protocol_version: u16,
     },
+    Watch {
+        request_id: String,
+        protocol_version: u16,
+    },
 }
 
 impl LocalCommand {
@@ -42,7 +46,8 @@ impl LocalCommand {
             Self::Status { request_id, .. }
             | Self::Sync { request_id, .. }
             | Self::Ack { request_id, .. }
-            | Self::Reset { request_id, .. } => request_id,
+            | Self::Reset { request_id, .. }
+            | Self::Watch { request_id, .. } => request_id,
         }
     }
 
@@ -58,6 +63,9 @@ impl LocalCommand {
                 protocol_version, ..
             }
             | Self::Reset {
+                protocol_version, ..
+            }
+            | Self::Watch {
                 protocol_version, ..
             } => *protocol_version,
         }
@@ -239,6 +247,56 @@ fn run(announce_status: bool) -> Result<(), ()> {
                         "protocol_version": PROTOCOL_VERSION,
                     }),
                 )?;
+            }
+            LocalCommand::Watch { request_id, .. } => {
+                let mut watch = match session.begin_watch() {
+                    Ok(watch) => watch,
+                    Err(error) => {
+                        write_frame(
+                            &mut output,
+                            &error_response(Some(&request_id), session_error_code(&error)),
+                        )?;
+                        continue;
+                    }
+                };
+                write_frame(
+                    &mut output,
+                    &json!({
+                        "type": "watch_started",
+                        "request_id": request_id,
+                        "protocol_version": PROTOCOL_VERSION,
+                    }),
+                )?;
+                loop {
+                    match watch.next_item() {
+                        Ok(WatchItem::Event(event)) => {
+                            let value = match serde_json::to_value(&event) {
+                                Ok(value) => value,
+                                Err(_) => break,
+                            };
+                            // Write before committing so a crash between the
+                            // two replays the event; the plugin merges by id.
+                            if write_frame(&mut output, &value).is_err() {
+                                return Ok(());
+                            }
+                            if watch.commit_event(&event).is_err() {
+                                break;
+                            }
+                        }
+                        Ok(WatchItem::Duplicate) => {}
+                        Ok(WatchItem::ResyncRequired(event)) => {
+                            if let Ok(value) = serde_json::to_value(&event) {
+                                let _ = write_frame(&mut output, &value);
+                            }
+                            break;
+                        }
+                        Err(_) => break,
+                    }
+                }
+                // The stream ended (Mac restart, generation change, network
+                // drop). Exit cleanly so the plugin reconnects from its
+                // persisted cursor.
+                return Ok(());
             }
         }
     }

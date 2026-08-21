@@ -175,7 +175,7 @@ BarWidget {
         anchors.top: button.top
         anchors.rightMargin: Style.space(1)
         anchors.topMargin: Style.space(1)
-        width: Style.space(16)
+        width: Math.max(Style.space(16), badgeText.implicitWidth + Style.space(6))
         height: Style.space(11)
         radius: height / 2
         color: Color.urgent
@@ -183,7 +183,7 @@ BarWidget {
         Text {
             id: badgeText
             anchors.centerIn: parent
-            text: root.unreadCount > 99 ? "9+" : String(root.unreadCount)
+            text: root.unreadCount > 99 ? "99+" : String(root.unreadCount)
             color: Color.background
             font.family: root.bar ? root.bar.fontFamily : Style.font.family
             font.pixelSize: Style.space(7)
