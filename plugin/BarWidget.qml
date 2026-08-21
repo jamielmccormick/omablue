@@ -11,23 +11,18 @@ BarWidget {
         ? bar.shell.serviceFor("omablue")
         : null
     readonly property int unreadCount: engine ? engine.unreadCount : 0
-    readonly property bool newMessage: engine ? engine.newMessagePending : false
     readonly property bool syncing: engine ? engine.syncing : false
     readonly property bool offline: engine ? engine.offline : true
     readonly property color baseForeground: bar ? bar.foreground : Color.foreground
-    readonly property color iconColor: {
-        if (root.offline) return Qt.darker(root.baseForeground, 1.45)
-        if (root.newMessage) return root.pulsePhase > 0.45 ? Color.accent : root.baseForeground
-        if (root.syncing) return Color.accent
-        return root.baseForeground
-    }
+    readonly property color iconColor: root.offline
+        ? Qt.darker(root.baseForeground, 1.45)
+        : root.baseForeground
     readonly property string tooltip: {
         if (root.offline) return "iMessage · Offline"
         if (root.syncing) return "iMessage · Syncing"
         if (root.unreadCount > 0) return "iMessage · " + root.unreadCount + " unread"
         return "iMessage"
     }
-    property real pulsePhase: 0
 
     implicitWidth: button.implicitWidth
     implicitHeight: button.implicitHeight
@@ -70,17 +65,6 @@ BarWidget {
     onEngineChanged: {
         injectPanel()
         if (root.engine && "settings" in root.engine) root.engine.settings = root.settings
-    }
-
-    SequentialAnimation on pulsePhase {
-        running: root.newMessage
-        loops: Animation.Infinite
-        NumberAnimation { to: 1; duration: 420; easing.type: Easing.InOutSine }
-        NumberAnimation { to: 0; duration: 760; easing.type: Easing.InOutSine }
-    }
-
-    onNewMessageChanged: {
-        if (!root.newMessage) root.pulsePhase = 0
     }
 
     Loader {
