@@ -64,17 +64,12 @@ Panel {
     function openConversation(conversation) {
         if (!conversation) return
         selectedConversationId = String(conversation.id)
-        if (engine) engine.visibleConversationId = String(conversation.id)
+        if (engine) {
+            engine.visibleConversationId = String(conversation.id)
+            engine.clearLocalUnread(String(conversation.id))
+        }
         selectedIndex = 0
         view = "thread"
-        if (engine) {
-            engine.conversations = engine.conversations.map(function(entry) {
-                if (String(entry.id) !== String(conversation.id)) return entry
-                var cleared = Object.assign({}, entry)
-                cleared.unread_count = 0
-                return cleared
-            })
-        }
         if (engine) engine.clearNewMessagePending()
         Qt.callLater(function() {
             threadScroller.contentY = 0
@@ -179,7 +174,7 @@ Panel {
                 spacing: Style.space(8)
 
                 Text {
-                    width: parent.width - syncIndicator.width - parent.spacing
+                    width: parent.width - syncAction.width - syncIndicator.width - parent.spacing * 2
                     text: root.engine
                         ? (root.engine.offline ? (root.engine.errorText || "Mac bridge offline")
                             : (root.engine.syncing ? "Syncing quietly" : "Content hidden until opened"))
@@ -188,6 +183,25 @@ Panel {
                     font.family: root.fontFamily
                     font.pixelSize: Style.font.caption
                     elide: Text.ElideRight
+                }
+
+                Text {
+                    id: syncAction
+                    text: root.engine && root.engine.syncing ? "Syncing…" : "↻ Sync"
+                    color: root.engine && root.engine.canManualRefresh()
+                        ? Color.accent
+                        : root.dim
+                    font.family: root.fontFamily
+                    font.pixelSize: Style.font.caption
+
+                    MouseArea {
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        cursorShape: root.engine && root.engine.canManualRefresh()
+                            ? Qt.PointingHandCursor
+                            : Qt.ArrowCursor
+                        onClicked: if (root.engine) root.engine.forceResync()
+                    }
                 }
 
                 Rectangle {

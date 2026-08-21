@@ -38,6 +38,7 @@ Item {
     property bool watchActive: false
     property bool panelOpen: false
     property string visibleConversationId: ""
+    property var clearedUnread: ({})
     property double lastNotificationAt: 0
 
     readonly property int notificationCooldownSeconds: {
@@ -78,7 +79,7 @@ Item {
         var incomingMessages = Array.isArray(frame.messages) ? frame.messages : []
         var wasLive = initialSyncComplete
 
-        conversations = mergeRecords(conversations, incomingConversations, "id").sort(function(a, b) {
+        conversations = applyClearedUnreadGuard(mergeRecords(conversations, incomingConversations, "id")).sort(function(a, b) {
             return String(b.last_message_at || "").localeCompare(String(a.last_message_at || ""))
         })
         messages = mergeRecords(messages, incomingMessages, "id").sort(function(a, b) {
@@ -140,6 +141,35 @@ Item {
 
     function clearNewMessagePending() {
         newMessagePending = false
+    }
+
+    function clearLocalUnread(conversationId) {
+        var key = String(conversationId)
+        for (var i = 0; i < conversations.length; i++) {
+            if (String(conversations[i].id) !== key) continue
+            // Remember where the conversation was when cleared; the Mac's
+            // unread count may only be hidden until real activity arrives,
+            // because mark-as-read cannot propagate to the Mac.
+            clearedUnread[key] = String(conversations[i].last_message_at || "")
+            var copy = Object.assign({}, conversations[i])
+            copy.unread_count = 0
+            conversations[i] = copy
+            break
+        }
+    }
+
+    function applyClearedUnreadGuard(list) {
+        return list.map(function(conversation) {
+            var key = String(conversation.id)
+            if (clearedUnread[key] === undefined) return conversation
+            if (String(conversation.last_message_at || "") !== clearedUnread[key]) {
+                delete clearedUnread[key]
+                return conversation
+            }
+            var copy = Object.assign({}, conversation)
+            copy.unread_count = 0
+            return copy
+        })
     }
 
     function isUnreadIncoming(message) {
@@ -216,6 +246,22 @@ Item {
         })
     }
 
+    function canManualRefresh() {
+        return helperReady && errorText === "" && !syncing && pendingSyncRequestId === ""
+    }
+
+    function forceResync() {
+        // The helper blocks inside the watch loop and cannot ingest new
+        // commands, so a manual refresh restarts it. The persisted cursor
+        // makes the follow-up sync incremental, so this is cheap.
+        if (!canManualRefresh()) return false
+        restartingHelper = true
+        backend.running = false
+        backend.running = true
+        statusText = "Refreshing"
+        return true
+    }
+
     function handleEvent(frame) {
         var kind = String(frame.event_type || "")
         if (kind === "resync_required") {
@@ -225,7 +271,7 @@ Item {
             return
         }
         if (kind === "conversation_upsert" && frame.conversation) {
-            conversations = mergeRecords(conversations, [frame.conversation], "id").sort(function(a, b) {
+            conversations = applyClearedUnreadGuard(mergeRecords(conversations, [frame.conversation], "id")).sort(function(a, b) {
                 return String(b.last_message_at || "").localeCompare(String(a.last_message_at || ""))
             })
             return
@@ -238,7 +284,7 @@ Item {
                 return Number(a.source_rowid || 0) - Number(b.source_rowid || 0)
             })
             if (frame.conversation) {
-                conversations = mergeRecords(conversations, [frame.conversation], "id").sort(function(a, b) {
+                conversations = applyClearedUnreadGuard(mergeRecords(conversations, [frame.conversation], "id")).sort(function(a, b) {
                     return String(b.last_message_at || "").localeCompare(String(a.last_message_at || ""))
                 })
             } else {
@@ -297,6 +343,16 @@ Item {
                 // cursor; polling covers us until then.
                 return
             }
+            var transientCodes = ["ssh_eof", "remote_unavailable", "ssh_io_error", "upstream_timeout"]
+            if (watchActive && transientCodes.indexOf(String(frame.code)) !== -1) {
+                // The Mac closes idle watch streams periodically. Treat this
+                // as a normal handoff: resync from the persisted cursor so no
+                // gap is missed, then watch again. Never latch offline here.
+                watchActive = false
+                statusText = "Reconnecting"
+                if (!syncing && pendingSyncRequestId === "") requestSync()
+                return
+            }
             errorText = String(frame.code || "Helper request failed")
             statusText = errorText
             return
@@ -317,6 +373,7 @@ Item {
             conversations = []
             messages = []
             events = []
+            clearedUnread = {}
             initialSyncComplete = false
             newMessagePending = false
             requestStatus()
